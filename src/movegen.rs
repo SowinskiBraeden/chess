@@ -107,6 +107,17 @@ pub fn bishop_attacks(square: u8) -> u64 {
     mask
 }
 
+// . . . x . . . .
+// . . . x . . . .
+// . . . x . . . .
+// . . . x . . . .
+// x x x R x x x x
+// . . . x . . . .
+// . . . x . . . .
+// . . . x . . . .
+// Rook (R) on square 27 can jump to any (x)
+// sitting at square +8, +1, -8, -1, repeating
+
 pub fn rook_attacks(square: u8) -> u64 {
     assert!(square < 64, "invalid square index");
 
@@ -130,7 +141,53 @@ pub fn rook_attacks(square: u8) -> u64 {
     mask
 }
 
+// . . . x . . . x
+// x . . x . . x .
+// . x . x . x . .
+// . . x x x . . .
+// x x x Q x x x x
+// . . x x x . . .
+// . x . x . x . .
+// x . . x . . x .
+// Queen (Q) on square 27 can jump to any (x)
+// sitting at square +7, +9, -7, -9,
+//                   +8, +1, -8, -1 repeating
+
 pub fn queen_attacks(square: u8) -> u64 {
     assert!(square < 64, "invalid square index");
     rook_attacks(square) | bishop_attacks(square)
+}
+
+// . . . . . . . .
+// . . . . . . . .
+// . . . . . . . .
+// . . x x x . . .
+// . . x K x . . .
+// . . x x x . . .
+// . . . . . . . .
+// . . . . . . . .
+// King (K) on square 27 can jump to any (x)
+// sitting at square +7, +9, -7, -9,
+//                   +8, +1, -8, -1 repeating
+pub fn king_attacks(square: u8) -> u64 {
+    const MAX_DIFF: i16 = 1;
+    const DIFFS: [i16; 8] = [7, 9, -7, -9, 8, 1, -8, -1];
+
+    let square = i16::from(square);
+    let file = square % 8;
+    let mut mask = 0u64;
+
+    for diff in DIFFS {
+        let dest = square + diff;
+        let new_file = dest % 8;
+
+        // checks going beyond rank or wrapping files
+        if !(0..64).contains(&dest) || (new_file - file).abs() > MAX_DIFF {
+            continue;
+        }
+
+        mask |= 1u64 << dest;
+    }
+
+    mask
 }

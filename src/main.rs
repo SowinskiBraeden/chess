@@ -157,4 +157,10 @@ fn main() {
 
     println!("\nQueen Debug");
     debug_bitboard(movegen::queen_attacks(27), 27);
+
+    println!("\nKing Debug");
+    debug_bitboard(movegen::king_attacks(27), 27);
+
+    println!("\nKing Debug");
+    debug_bitboard(movegen::king_attacks(7), 7);
 }
