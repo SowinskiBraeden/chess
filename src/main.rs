@@ -109,7 +109,7 @@ impl fmt::Display for Board {
     }
 }
 
-fn debug_bitboard(b: u64) {
+fn debug_bitboard(b: u64, square: u8) {
     for rank in (0..8).rev() {
         print!("{} ", rank + 1);
 
@@ -122,6 +122,10 @@ fn debug_bitboard(b: u64) {
                 symbol = 'x';
             }
 
+            if 1u64 << square & mask != 0 {
+                symbol = '@';
+            }
+
             print!(" {symbol}");
         }
         println!();
@@ -131,14 +135,20 @@ fn debug_bitboard(b: u64) {
 
 fn main() {
     let game = Board::new();
-    println!("{game}\n");
+    println!("{game}");
 
-    println!("Pawn Debug");
-    debug_bitboard(movegen::pawn_attacks(20, Color::White));
+    println!("\nPawn Debug White");
+    debug_bitboard(movegen::pawn_attacks(20, Color::White), 20);
 
-    println!("Pawn Debug");
-    debug_bitboard(movegen::pawn_attacks(8, Color::Black));
+    println!("\nPawn Debug Black");
+    debug_bitboard(movegen::pawn_attacks(8, Color::Black), 8);
 
-    println!("Knight Debug");
-    debug_bitboard(movegen::knight_attacks(1));
+    println!("\nKnight Debug");
+    debug_bitboard(movegen::knight_attacks(1), 1);
+
+    println!("\nKnight Debug");
+    debug_bitboard(movegen::knight_attacks(27), 27);
+
+    println!("\nBishop Debug");
+    debug_bitboard(movegen::bishop_attacks(27), 27);
 }
