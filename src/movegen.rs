@@ -106,3 +106,26 @@ pub fn bishop_attacks(square: u8) -> u64 {
 
     mask
 }
+
+pub fn rook_attacks(square: u8) -> u64 {
+    assert!(square < 64, "invalid square index");
+
+    const MAX_DIFF: i16 = 1;
+    const DIFFS: [i16; 4] = [8, 1, -8, -1];
+
+    let square = i16::from(square);
+    let mut mask = 0u64;
+
+    for diff in DIFFS {
+        let mut last = square;
+        let mut dest = last + diff;
+
+        while (0..64).contains(&dest) && (dest % 8 - last % 8).abs() <= MAX_DIFF {
+            mask |= 1u64 << dest;
+            last = dest;
+            dest += diff;
+        }
+    }
+
+    mask
+}

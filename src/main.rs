@@ -151,4 +151,7 @@ fn main() {
 
     println!("\nBishop Debug");
     debug_bitboard(movegen::bishop_attacks(27), 27);
+
+    println!("\nRook Debug");
+    debug_bitboard(movegen::rook_attacks(26), 26);
 }
