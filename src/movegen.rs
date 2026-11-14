@@ -15,7 +15,7 @@ use crate::Color;
 pub fn pawn_attacks(square: u8, color: Color) -> u64 {
     assert!(square < 64, "invalid square index");
 
-    let MAX_DIFF: i16 = 1;
+    const MAX_DIFF: i16 = 1;
     let diffs: [i16; 2] = match color {
         Color::White => [7, 9],
         Color::Black => [-7, -9],
@@ -170,6 +170,8 @@ pub fn queen_attacks(square: u8) -> u64 {
 // sitting at square +7, +9, -7, -9,
 //                   +8, +1, -8, -1 repeating
 pub fn king_attacks(square: u8) -> u64 {
+    assert!(square < 64, "invalid square index");
+
     const MAX_DIFF: i16 = 1;
     const DIFFS: [i16; 8] = [7, 9, -7, -9, 8, 1, -8, -1];
 
