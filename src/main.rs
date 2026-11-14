@@ -154,4 +154,7 @@ fn main() {
 
     println!("\nRook Debug");
     debug_bitboard(movegen::rook_attacks(26), 26);
+
+    println!("\nQueen Debug");
+    debug_bitboard(movegen::queen_attacks(27), 27);
 }

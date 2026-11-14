@@ -129,3 +129,8 @@ pub fn rook_attacks(square: u8) -> u64 {
 
     mask
 }
+
+pub fn queen_attacks(square: u8) -> u64 {
+    assert!(square < 64, "invalid square index");
+    rook_attacks(square) | bishop_attacks(square)
+}
