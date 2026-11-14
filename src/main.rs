@@ -2,10 +2,11 @@
 
 use std::{char, fmt};
 mod bitboard_constants;
+mod movegen;
 
 #[derive(Clone, Copy)]
 #[repr(usize)]
-enum Color {
+pub enum Color {
     White,
     Black,
 }
@@ -28,7 +29,7 @@ enum Piece {
 //             Piece::Knight | Piece::Bishop => 3,
 //             Piece::Rook => 5,
 //             Piece::Queen => 9,
-//             _ => 10,
+//             Piece::King => 10,
 //         }
 //     }
 // }
@@ -62,10 +63,20 @@ impl Board {
 
         board
     }
+
+    fn occupancy(&self, color: Color) -> u64 {
+        self.pieces[color as usize]
+            .iter()
+            .fold(0, |occupied, bitboard| occupied | bitboard)
+    }
+
+    fn all_occupancy(&self) -> u64 {
+        self.occupancy(Color::White) | self.occupancy(Color::Black)
+    }
 }
 
 impl fmt::Display for Board {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Matches the order of Color and Piece enums.
         const PIECE_SYMBOLS: [[char; 6]; 2] = [
             ['P', 'N', 'B', 'R', 'Q', 'K'],
@@ -98,7 +109,36 @@ impl fmt::Display for Board {
     }
 }
 
+fn debug_bitboard(b: u64) {
+    for rank in (0..8).rev() {
+        print!("{} ", rank + 1);
+
+        for file in 0..8 {
+            let s = rank * 8 + file;
+            let mask = 1u64 << s;
+            let mut symbol = '.';
+
+            if b & mask != 0 {
+                symbol = 'x';
+            }
+
+            print!(" {symbol}");
+        }
+        println!();
+    }
+    println!("   a b c d e f g h")
+}
+
 fn main() {
     let game = Board::new();
-    println!("{game}");
+    println!("{game}\n");
+
+    println!("Pawn Debug");
+    debug_bitboard(movegen::pawn_attacks(20, Color::White));
+
+    println!("Pawn Debug");
+    debug_bitboard(movegen::pawn_attacks(8, Color::Black));
+
+    println!("Knight Debug");
+    debug_bitboard(movegen::knight_attacks(1));
 }
