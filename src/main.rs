@@ -73,6 +73,88 @@ impl Board {
     fn all_occupancy(&self) -> u64 {
         self.occupancy(Color::White) | self.occupancy(Color::Black)
     }
+
+    fn pawn_moves(&self, square: u8, color: Color) -> u64 {
+        assert!(square < 64, "invalid square index");
+
+        let (enemy, forward, starting_rank): (Color, i16, u8) = match color {
+            Color::White => (Color::Black, 8, 1),
+            Color::Black => (Color::White, -8, 6),
+        };
+
+        let occupied = self.all_occupancy();
+        let mut moves = movegen::pawn_attacks(square, color) & self.occupancy(enemy);
+        let one_step = i16::from(square) + forward;
+
+        if (0..64).contains(&one_step) && occupied & (1u64 << one_step) == 0 {
+            moves |= 1u64 << one_step;
+
+            if square / 8 == starting_rank {
+                let two_steps = one_step + forward;
+                if occupied & (1u64 << two_steps) == 0 {
+                    moves |= 1u64 << two_steps;
+                }
+            }
+        }
+
+        moves
+    }
+
+    fn knight_moves(&self, square: u8, color: Color) -> u64 {
+        assert!(square < 64, "invalid square index");
+        let knights = self.pieces[color as usize][Piece::Knight as usize];
+        if knights & (1u64 << square) == 0 {
+            return 0;
+        }
+        movegen::knight_attacks(square) & !self.occupancy(color)
+    }
+
+    fn bishop_moves(&self, square: u8, color: Color) -> u64 {
+        assert!(square < 64, "invalid square index");
+        let bishops = self.pieces[color as usize][Piece::Bishop as usize];
+        if bishops & (1u64 << square) == 0 {
+            return 0;
+        }
+        movegen::bishop_attacks(square, self.all_occupancy()) & !self.occupancy(color)
+    }
+
+    fn rook_moves(&self, square: u8, color: Color) -> u64 {
+        assert!(square < 64, "invalid square index");
+        let rooks = self.pieces[color as usize][Piece::Rook as usize];
+        if rooks & (1u64 << square) == 0 {
+            return 0;
+        }
+        movegen::rook_attacks(square, self.all_occupancy()) & !self.occupancy(color)
+    }
+
+    fn queen_moves(&self, square: u8, color: Color) -> u64 {
+        assert!(square < 64, "invalid square index");
+        let queens = self.pieces[color as usize][Piece::Queen as usize];
+        if queens & (1u64 << square) == 0 {
+            return 0;
+        }
+        movegen::queen_attacks(square, self.all_occupancy()) & !self.occupancy(color)
+    }
+
+    fn king_moves(&self, square: u8, color: Color) -> u64 {
+        assert!(square < 64, "invalid square index");
+        let kings = self.pieces[color as usize][Piece::King as usize];
+        if kings & (1u64 << square) == 0 {
+            return 0;
+        }
+        movegen::king_attacks(square) & !self.occupancy(color)
+    }
+
+    fn moves(&self, piece: Piece, square: u8, color: Color) -> u64 {
+        match piece {
+            Piece::Pawn => self.pawn_moves(square, color),
+            Piece::Knight => self.knight_moves(square, color),
+            Piece::Bishop => self.bishop_moves(square, color),
+            Piece::Rook => self.rook_moves(square, color),
+            Piece::Queen => self.queen_moves(square, color),
+            Piece::King => self.king_moves(square, color),
+        }
+    }
 }
 
 impl fmt::Display for Board {
@@ -150,13 +232,13 @@ fn main() {
     debug_bitboard(movegen::knight_attacks(27), 27);
 
     println!("\nBishop Debug");
-    debug_bitboard(movegen::bishop_attacks(27), 27);
+    debug_bitboard(movegen::bishop_attacks(27, 0), 27);
 
     println!("\nRook Debug");
-    debug_bitboard(movegen::rook_attacks(26), 26);
+    debug_bitboard(movegen::rook_attacks(26, 0), 26);
 
     println!("\nQueen Debug");
-    debug_bitboard(movegen::queen_attacks(27), 27);
+    debug_bitboard(movegen::queen_attacks(27, 0), 27);
 
     println!("\nKing Debug");
     debug_bitboard(movegen::king_attacks(27), 27);

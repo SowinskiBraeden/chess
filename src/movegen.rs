@@ -1,9 +1,10 @@
 use crate::Color;
+use crate::Piece;
 
 // . . . . . . . .
 // . . . . . . . .
 // . . . . . . . .
-// . . x x x . . .
+// . . x . x . . .
 // . . . P . . . .
 // . . . . . . . .
 // . . . . . . . .
@@ -84,7 +85,7 @@ pub fn knight_attacks(square: u8) -> u64 {
 // Bishop (B) on square 27 can jump to any (x)
 // sitting at square +7, +9, -7, -9, repeating
 
-pub fn bishop_attacks(square: u8) -> u64 {
+pub fn bishop_attacks(square: u8, occupied: u64) -> u64 {
     assert!(square < 64, "invalid square index");
 
     const MAX_DIFF: i16 = 1;
@@ -99,6 +100,9 @@ pub fn bishop_attacks(square: u8) -> u64 {
 
         while (0..64).contains(&dest) && (dest % 8 - last % 8).abs() == MAX_DIFF {
             mask |= 1u64 << dest;
+            if occupied & (1u64 << dest) != 0 {
+                break;
+            }
             last = dest;
             dest += diff;
         }
@@ -118,7 +122,7 @@ pub fn bishop_attacks(square: u8) -> u64 {
 // Rook (R) on square 27 can jump to any (x)
 // sitting at square +8, +1, -8, -1, repeating
 
-pub fn rook_attacks(square: u8) -> u64 {
+pub fn rook_attacks(square: u8, occupied: u64) -> u64 {
     assert!(square < 64, "invalid square index");
 
     const MAX_DIFF: i16 = 1;
@@ -133,6 +137,11 @@ pub fn rook_attacks(square: u8) -> u64 {
 
         while (0..64).contains(&dest) && (dest % 8 - last % 8).abs() <= MAX_DIFF {
             mask |= 1u64 << dest;
+
+            if occupied & (1u64 << dest) != 0 {
+                break;
+            }
+
             last = dest;
             dest += diff;
         }
@@ -153,9 +162,9 @@ pub fn rook_attacks(square: u8) -> u64 {
 // sitting at square +7, +9, -7, -9,
 //                   +8, +1, -8, -1 repeating
 
-pub fn queen_attacks(square: u8) -> u64 {
+pub fn queen_attacks(square: u8, occupied: u64) -> u64 {
     assert!(square < 64, "invalid square index");
-    rook_attacks(square) | bishop_attacks(square)
+    rook_attacks(square, occupied) | bishop_attacks(square, occupied)
 }
 
 // . . . . . . . .
@@ -192,4 +201,15 @@ pub fn king_attacks(square: u8) -> u64 {
     }
 
     mask
+}
+
+pub fn attacks(piece: Piece, square: u8, color: Color, occupied: u64) -> u64 {
+    match piece {
+        Piece::Pawn => pawn_attacks(square, color),
+        Piece::Knight => knight_attacks(square),
+        Piece::Bishop => bishop_attacks(square, occupied),
+        Piece::Rook => rook_attacks(square, occupied),
+        Piece::Queen => queen_attacks(square, occupied),
+        Piece::King => king_attacks(square),
+    }
 }
