@@ -1,5 +1,4 @@
-use crate::Color;
-use crate::Piece;
+use crate::game::{Color, Piece};
 
 // . . . . . . . .
 // . . . . . . . .
