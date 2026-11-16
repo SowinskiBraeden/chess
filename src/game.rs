@@ -2,6 +2,7 @@
 
 use crate::bitboard_constants;
 use crate::movegen;
+use crate::movegen::attacks;
 use std::{char, fmt};
 
 #[derive(Clone, Copy)]
@@ -9,6 +10,15 @@ use std::{char, fmt};
 pub enum Color {
     White,
     Black,
+}
+
+impl Color {
+    fn opposite(&self) -> Color {
+        match self {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -32,12 +42,35 @@ impl Piece {
             Piece::King => 10,
         }
     }
+
+    fn from(value: usize) -> Option<Piece> {
+        match value {
+            0 => Some(Piece::Pawn),
+            1 => Some(Piece::Knight),
+            2 => Some(Piece::Bishop),
+            3 => Some(Piece::Rook),
+            4 => Some(Piece::Queen),
+            5 => Some(Piece::King),
+            _ => None,
+        }
+    }
 }
 
+#[derive(Clone, Copy)]
 pub struct Board {
     pieces: [[u64; 6]; 2], // [color][piece] -> u64 bitboard
     turn: Color,
     score: [u8; 2], // [color] -> score
+}
+
+fn board_to_squares(board: u64) -> Vec<u8> {
+    let mut squares = Vec::new();
+    for i in 0u8..64u8 {
+        if (1u64 << i) & board != 0 {
+            squares.push(i);
+        }
+    }
+    squares
 }
 
 impl Board {
@@ -68,14 +101,34 @@ impl Board {
         board
     }
 
-    fn occupancy(&self, color: Color) -> u64 {
+    pub fn set_bitboard(&mut self, color: Color, piece: Piece, bitboard: u64) {
+        self.pieces[color as usize][piece as usize] = bitboard;
+    }
+
+    pub fn occupancy(&self, color: Color) -> u64 {
         self.pieces[color as usize]
             .iter()
             .fold(0, |occupied, bitboard| occupied | bitboard)
     }
 
-    fn all_occupancy(&self) -> u64 {
+    pub fn all_occupancy(&self) -> u64 {
         self.occupancy(Color::White) | self.occupancy(Color::Black)
+    }
+
+    pub fn all_attacks(&self, color: Color, occupied: u64) -> u64 {
+        let mut attacks = 0u64;
+        for (piece, bitboard) in self.pieces[color as usize].iter().enumerate() {
+            let squares = board_to_squares(*bitboard);
+            let piece = match Piece::from(piece) {
+                Some(x) => x,
+                None => return 0u64,
+            };
+            for square in squares {
+                attacks |= movegen::attacks(piece, square, color, occupied);
+            }
+        }
+
+        attacks
     }
 
     fn pawn_moves(&self, square: u8, color: Color) -> u64 {
@@ -98,6 +151,16 @@ impl Board {
                 if occupied & (1u64 << two_steps) == 0 {
                     moves |= 1u64 << two_steps;
                 }
+            }
+        }
+
+        let squares = board_to_squares(moves);
+        for s in squares {
+            let next_board = self.all_occupancy() & !(1u64 << square) | 1u64 << s;
+            let attacks = self.all_attacks(enemy, next_board);
+
+            if attacks & self.pieces[color as usize][Piece::King as usize] != 0 {
+                moves &= !(1u64 << s);
             }
         }
 
