@@ -2,7 +2,6 @@
 
 use crate::bitboard_constants;
 use crate::movegen;
-use crate::movegen::attacks;
 use std::{char, fmt};
 
 #[derive(Clone, Copy)]
@@ -131,6 +130,23 @@ impl Board {
         attacks
     }
 
+    /*
+     * validates a set of moves by checking if a move
+     * will put the king in check, removes invalid moves
+     */
+    fn validate_moves(&self, starting_square: u8, moves: &mut u64, color: Color) {
+        let enemy = color.opposite();
+        let squares = board_to_squares(*moves);
+        for s in squares {
+            let next_board = self.all_occupancy() & !(1u64 << starting_square) | 1u64 << s;
+            let attacks = self.all_attacks(enemy, next_board);
+
+            if attacks & self.pieces[color as usize][Piece::King as usize] != 0 {
+                *moves &= !(1u64 << s);
+            }
+        }
+    }
+
     fn pawn_moves(&self, square: u8, color: Color) -> u64 {
         assert!(square < 64, "invalid square index");
 
@@ -154,15 +170,7 @@ impl Board {
             }
         }
 
-        let squares = board_to_squares(moves);
-        for s in squares {
-            let next_board = self.all_occupancy() & !(1u64 << square) | 1u64 << s;
-            let attacks = self.all_attacks(enemy, next_board);
-
-            if attacks & self.pieces[color as usize][Piece::King as usize] != 0 {
-                moves &= !(1u64 << s);
-            }
-        }
+        self.validate_moves(square, &mut moves, color);
 
         moves
     }
@@ -173,7 +181,10 @@ impl Board {
         if knights & (1u64 << square) == 0 {
             return 0;
         }
-        movegen::knight_attacks(square) & !self.occupancy(color)
+        let mut moves = movegen::knight_attacks(square) & !self.occupancy(color);
+        self.validate_moves(square, &mut moves, color);
+
+        moves
     }
 
     fn bishop_moves(&self, square: u8, color: Color) -> u64 {
@@ -182,7 +193,11 @@ impl Board {
         if bishops & (1u64 << square) == 0 {
             return 0;
         }
-        movegen::bishop_attacks(square, self.all_occupancy()) & !self.occupancy(color)
+        let mut moves =
+            movegen::bishop_attacks(square, self.all_occupancy()) & !self.occupancy(color);
+        self.validate_moves(square, &mut moves, color);
+
+        moves
     }
 
     fn rook_moves(&self, square: u8, color: Color) -> u64 {
@@ -191,7 +206,10 @@ impl Board {
         if rooks & (1u64 << square) == 0 {
             return 0;
         }
-        movegen::rook_attacks(square, self.all_occupancy()) & !self.occupancy(color)
+        let mut moves =
+            movegen::rook_attacks(square, self.all_occupancy()) & !self.occupancy(color);
+        self.validate_moves(square, &mut moves, color);
+        moves
     }
 
     fn queen_moves(&self, square: u8, color: Color) -> u64 {
@@ -200,7 +218,11 @@ impl Board {
         if queens & (1u64 << square) == 0 {
             return 0;
         }
-        movegen::queen_attacks(square, self.all_occupancy()) & !self.occupancy(color)
+        let mut moves =
+            movegen::queen_attacks(square, self.all_occupancy()) & !self.occupancy(color);
+        self.validate_moves(square, &mut moves, color);
+
+        moves
     }
 
     fn king_moves(&self, square: u8, color: Color) -> u64 {
@@ -209,7 +231,9 @@ impl Board {
         if kings & (1u64 << square) == 0 {
             return 0;
         }
-        movegen::king_attacks(square) & !self.occupancy(color)
+        let mut moves = movegen::king_attacks(square) & !self.occupancy(color);
+        self.validate_moves(square, &mut moves, color);
+        moves
     }
 
     pub fn moves(&self, piece: Piece, square: u8, color: Color) -> u64 {
