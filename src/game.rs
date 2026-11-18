@@ -131,10 +131,10 @@ impl Board {
     }
 
     /*
-     * validates a set of moves by checking if a move
-     * will put the king in check, removes invalid moves
+     * checks a bitboard of psuedo-legal moves (possible moves without
+     * checking king safety) removes illegal moves (putting king in check)
      */
-    fn validate_moves(&self, starting_square: u8, moves: &mut u64, color: Color) {
+    fn legal_moves(&self, starting_square: u8, moves: &mut u64, color: Color) {
         let enemy = color.opposite();
         let squares = board_to_squares(*moves);
         for s in squares {
@@ -170,7 +170,7 @@ impl Board {
             }
         }
 
-        self.validate_moves(square, &mut moves, color);
+        self.legal_moves(square, &mut moves, color);
 
         moves
     }
@@ -182,7 +182,7 @@ impl Board {
             return 0;
         }
         let mut moves = movegen::knight_attacks(square) & !self.occupancy(color);
-        self.validate_moves(square, &mut moves, color);
+        self.legal_moves(square, &mut moves, color);
 
         moves
     }
@@ -195,7 +195,7 @@ impl Board {
         }
         let mut moves =
             movegen::bishop_attacks(square, self.all_occupancy()) & !self.occupancy(color);
-        self.validate_moves(square, &mut moves, color);
+        self.legal_moves(square, &mut moves, color);
 
         moves
     }
@@ -208,7 +208,7 @@ impl Board {
         }
         let mut moves =
             movegen::rook_attacks(square, self.all_occupancy()) & !self.occupancy(color);
-        self.validate_moves(square, &mut moves, color);
+        self.legal_moves(square, &mut moves, color);
         moves
     }
 
@@ -220,7 +220,7 @@ impl Board {
         }
         let mut moves =
             movegen::queen_attacks(square, self.all_occupancy()) & !self.occupancy(color);
-        self.validate_moves(square, &mut moves, color);
+        self.legal_moves(square, &mut moves, color);
 
         moves
     }
@@ -232,7 +232,7 @@ impl Board {
             return 0;
         }
         let mut moves = movegen::king_attacks(square) & !self.occupancy(color);
-        self.validate_moves(square, &mut moves, color);
+        self.legal_moves(square, &mut moves, color);
         moves
     }
 
