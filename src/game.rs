@@ -57,7 +57,7 @@ impl Piece {
 
 #[derive(Clone, Copy)]
 pub struct Board {
-    pieces: [[u64; 6]; 2], // [color][piece] -> u64 bitboard
+    pub pieces: [[u64; 6]; 2], // [color][piece] -> u64 bitboard
     turn: Color,
     score: [u8; 2], // [color] -> score
 }
@@ -139,9 +139,17 @@ impl Board {
         let squares = board_to_squares(*moves);
         for s in squares {
             let next_board = self.all_occupancy() & !(1u64 << starting_square) | 1u64 << s;
+
+            // detect if king has moved, then check against kings latest position
+            let king_position = match next_board & self.pieces[color as usize][Piece::King as usize]
+            {
+                0 => 1u64 << s,
+                _ => self.pieces[color as usize][Piece::King as usize],
+            };
+
             let attacks = self.all_attacks(enemy, next_board);
 
-            if attacks & self.pieces[color as usize][Piece::King as usize] != 0 {
+            if attacks & king_position != 0 {
                 *moves &= !(1u64 << s);
             }
         }

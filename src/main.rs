@@ -8,20 +8,20 @@ mod movegen;
 fn main() {
     let mut game = Board::new();
 
-    game.set_bitboard(Color::Black, Piece::Bishop, 1u64 << 32); // puts enemy bishop in sight of king on queen pawn move
+    game.set_bitboard(Color::Black, Piece::Bishop, 1u64 << 33); // puts enemy bishop in sight of king on queen pawn move
     game.set_bitboard(
-        Color::Black,
+        Color::White,
         Piece::Pawn,
-        1u64 << 20 | bitboard_constants::BLACK_PAWN_INIT,
-    ); // gives white queen pawn ability to capture also to move
+        game.pieces[Color::White as usize][Piece::Pawn as usize] & !(1u64 << 12),
+    );
 
     println!("{game}");
 
     println!("\nDebug Attacks");
-    debug_bitboard(game.all_attacks(Color::Black, game.all_occupancy()), 32);
+    debug_bitboard(game.all_attacks(Color::Black, game.all_occupancy()), 33);
 
-    println!("\nDebug Pawn White");
-    debug_bitboard(game.moves(Piece::Pawn, 11, Color::White), 11);
+    println!("\nDebug White King");
+    debug_bitboard(game.moves(Piece::King, 4, Color::White), 4);
 
     // println!("\nPawn Debug White");
     // debug_bitboard(movegen::pawn_attacks(20, Color::White), 20);
