@@ -238,6 +238,8 @@ impl Board {
             }
         };
 
+        // prevent king capture + filter psuedo-legal moves into just legal moves
+        moves &= !self.pieces[color.opposite() as usize][Piece::King as usize];
         self.filter_legal_moves(&mut moves, square, color, piece);
         moves
     }
