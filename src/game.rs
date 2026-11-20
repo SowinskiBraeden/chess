@@ -70,12 +70,12 @@ pub struct Board {
     score: [u8; 2], // [color] -> score
 }
 
-fn board_to_squares(board: u64) -> Vec<u8> {
+// Iterate only over set bits
+fn board_to_squares(mut board: u64) -> Vec<u8> {
     let mut squares = Vec::new();
-    for i in 0u8..64u8 {
-        if (1u64 << i) & board != 0 {
-            squares.push(i);
-        }
+    while board != 0 {
+        squares.push(board.trailing_zeros() as u8);
+        board &= board - 1;
     }
     squares
 }
