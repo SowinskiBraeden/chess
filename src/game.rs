@@ -4,7 +4,7 @@ use crate::bitboard_constants;
 use crate::movegen;
 use std::{char, fmt};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(usize)]
 pub enum Color {
     White,
@@ -122,13 +122,14 @@ impl Board {
         self.occupancy(Color::White) | self.occupancy(Color::Black)
     }
 
-    pub fn all_attacks(&self, color: Color, occupied: u64) -> u64 {
+    pub fn all_attacks(&self, color: Color) -> u64 {
+        let occupied = self.all_occupancy();
         let mut attacks = 0u64;
         for (piece, bitboard) in self.pieces[color as usize].iter().enumerate() {
             let squares = board_to_squares(*bitboard);
             let piece = Piece::from(piece);
             for square in squares {
-                attacks |= movegen::attacks(piece, square, color, occupied);
+                attacks |= movegen::attacks(color, piece, square, occupied);
             }
         }
 
@@ -140,35 +141,29 @@ impl Board {
      * checking king safety) removes illegal moves (putting king in check),
      * or saving king from check
      */
-    fn filter_legal_moves(&self, moves: &mut u64, starting_square: u8, color: Color) {
+    fn filter_legal_moves(&self, moves: &mut u64, starting_square: u8, color: Color, piece: Piece) {
         let enemy = color.opposite();
         let squares = board_to_squares(*moves);
         for s in squares {
             // clone current state, and apply moves/captures for each possible move in squares
             let to = 1u64 << s;
-            let mut next_board = self.clone();
-            let (p, c) = match next_board.square_to_piece(starting_square)
-            {
-                Some(r) => r,
-                None => panic!("filter_legal_moves: cant determine starting_square piece/color"),
-            };
+            let mut next_board = *self; // copy board
 
             // remove enemy if captured
             if next_board.occupancy(enemy) & to != 0 {
-                let (ep, ec) = match next_board.square_to_piece(s)
-                {
+                let (ep, ec) = match next_board.square_to_piece(s) {
                     Some(r) => r,
                     None => panic!("filter_legal_moves: cant determine enemy (s) piece/color"),
                 };
-                next_board.set_bitboard(
-                    ec,
-                    ep,
-                    next_board.pieces[ec as usize][ep as usize] & !to
-                );
+                next_board.set_bitboard(ec, ep, next_board.pieces[ec as usize][ep as usize] & !to);
             }
 
             // move piece to possible `to` square destination
-            next_board.set_bitboard(c, p, next_board.pieces[c as usize][p as usize] & !(1u64 << starting_square) | to);
+            next_board.set_bitboard(
+                color,
+                piece,
+                next_board.pieces[color as usize][piece as usize] & !(1u64 << starting_square) | to,
+            );
 
             // filter out moves that leave king under attack
             if next_board.king_under_attack(color) {
@@ -179,80 +174,9 @@ impl Board {
 
     fn king_under_attack(&self, color: Color) -> bool {
         let enemy = color.opposite();
-        let attacks = self.all_attacks(enemy, self.all_occupancy());
+        let attacks = self.all_attacks(enemy);
         let king = self.pieces[color as usize][Piece::King as usize];
         attacks & king != 0
-    }
-
-    fn pawn_moves(&self, square: u8, color: Color) -> u64 {
-        assert!(square < 64, "invalid square index");
-
-        let (enemy, forward, starting_rank): (Color, i16, u8) = match color {
-            Color::White => (Color::Black, 8, 1),
-            Color::Black => (Color::White, -8, 6),
-        };
-
-        let occupied = self.all_occupancy();
-        let mut moves = movegen::pawn_attacks(square, color) & self.occupancy(enemy);
-        let one_step = i16::from(square) + forward;
-
-        if (0..64).contains(&one_step) && occupied & (1u64 << one_step) == 0 {
-            moves |= 1u64 << one_step;
-
-            if square / 8 == starting_rank {
-                let two_steps = one_step + forward;
-                if occupied & (1u64 << two_steps) == 0 {
-                    moves |= 1u64 << two_steps;
-                }
-            }
-        }
-
-        moves
-    }
-
-    fn knight_moves(&self, square: u8, color: Color) -> u64 {
-        assert!(square < 64, "invalid square index");
-        let knights = self.pieces[color as usize][Piece::Knight as usize];
-        if knights & (1u64 << square) == 0 {
-            return 0;
-        }
-        movegen::knight_attacks(square) & !self.occupancy(color)
-    }
-
-    fn bishop_moves(&self, square: u8, color: Color) -> u64 {
-        assert!(square < 64, "invalid square index");
-        let bishops = self.pieces[color as usize][Piece::Bishop as usize];
-        if bishops & (1u64 << square) == 0 {
-            return 0;
-        }
-        movegen::bishop_attacks(square, self.all_occupancy()) & !self.occupancy(color)
-    }
-
-    fn rook_moves(&self, square: u8, color: Color) -> u64 {
-        assert!(square < 64, "invalid square index");
-        let rooks = self.pieces[color as usize][Piece::Rook as usize];
-        if rooks & (1u64 << square) == 0 {
-            return 0;
-        }
-        movegen::rook_attacks(square, self.all_occupancy()) & !self.occupancy(color)
-    }
-
-    fn queen_moves(&self, square: u8, color: Color) -> u64 {
-        assert!(square < 64, "invalid square index");
-        let queens = self.pieces[color as usize][Piece::Queen as usize];
-        if queens & (1u64 << square) == 0 {
-            return 0;
-        }
-        movegen::queen_attacks(square, self.all_occupancy()) & !self.occupancy(color)
-    }
-
-    fn king_moves(&self, square: u8, color: Color) -> u64 {
-        assert!(square < 64, "invalid square index");
-        let kings = self.pieces[color as usize][Piece::King as usize];
-        if kings & (1u64 << square) == 0 {
-            return 0;
-        }
-        movegen::king_attacks(square) & !self.occupancy(color)
     }
 
     fn square_to_piece(&self, square: u8) -> Option<(Piece, Color)> {
@@ -268,22 +192,53 @@ impl Board {
         None
     }
 
+    // Handles more complicated pawn movements, one step/two step, captures
+    fn pawn_moves(&self, color: Color, square: u8) -> u64 {
+        let (enemy, forward, starting_rank): (Color, i16, u8) = match color {
+            Color::White => (Color::Black, 8, 1),
+            Color::Black => (Color::White, -8, 6),
+        };
+
+        let occupied = self.all_occupancy();
+        let mut moves = movegen::pawn_attacks(square, color) & self.occupancy(enemy);
+        let one_step = i16::from(square) + forward;
+
+        if (0..64).contains(&one_step) && occupied & (1u64 << one_step) == 0 {
+            moves |= 1u64 << one_step;
+
+            if square / 8 == starting_rank {
+                let two_step = one_step + forward;
+                if occupied & (1u64 << two_step) == 0 {
+                    moves |= 1u64 << two_step;
+                }
+            }
+        }
+
+        moves
+    }
+
     pub fn moves(&self, square: u8) -> u64 {
+        assert!(square < 64, "invalid square index");
+
         let (piece, color) = match self.square_to_piece(square) {
             Some((p, c)) => (p, c),
             None => return 0u64,
         };
 
+        if self.turn != color {
+            return 0u64;
+        }
+
         let mut moves = match piece {
-            Piece::Pawn => self.pawn_moves(square, color),
-            Piece::Knight => self.knight_moves(square, color),
-            Piece::Bishop => self.bishop_moves(square, color),
-            Piece::Rook => self.rook_moves(square, color),
-            Piece::Queen => self.queen_moves(square, color),
-            Piece::King => self.king_moves(square, color),
+            Piece::Pawn => self.pawn_moves(color, square),
+            _ => {
+                // every other piece move is simple and can be determined here
+                movegen::attacks(color, piece, square, self.all_occupancy())
+                    & !self.occupancy(color)
+            }
         };
 
-        self.filter_legal_moves(&mut moves, square, color);
+        self.filter_legal_moves(&mut moves, square, color, piece);
         moves
     }
 }
@@ -322,7 +277,8 @@ impl fmt::Display for Board {
     }
 }
 
-pub fn debug_bitboard(b: u64, square: u8) {
+// Useful for debugging attacks/moves
+pub fn debug_bitboard(b: u64, origin: u8) {
     for rank in (0..8).rev() {
         print!("{} ", rank + 1);
 
@@ -335,7 +291,7 @@ pub fn debug_bitboard(b: u64, square: u8) {
                 symbol = 'x';
             }
 
-            if 1u64 << square & mask != 0 {
+            if 1u64 << origin & mask != 0 {
                 symbol = '@';
             }
 
@@ -345,4 +301,3 @@ pub fn debug_bitboard(b: u64, square: u8) {
     }
     println!("   a b c d e f g h");
 }
-

@@ -202,7 +202,7 @@ pub fn king_attacks(square: u8) -> u64 {
     mask
 }
 
-pub fn attacks(piece: Piece, square: u8, color: Color, occupied: u64) -> u64 {
+pub fn attacks(color: Color, piece: Piece, square: u8, occupied: u64) -> u64 {
     match piece {
         Piece::Pawn => pawn_attacks(square, color),
         Piece::Knight => knight_attacks(square),
