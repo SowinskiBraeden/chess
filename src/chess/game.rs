@@ -1,3 +1,4 @@
+use super::board::MoveError;
 use super::{Board, Color};
 
 pub enum GameStatus {
@@ -25,11 +26,16 @@ impl Game {
         }
     }
 
-    pub fn play_move(&mut self, from: u8, to: u8) -> bool {
-        if !self.board.play_move(from, to) {
-            return false;
+    pub fn play_move(&mut self, from: u8, to: u8) -> Result<(), MoveError> {
+        let color = self.board.turn;
+        let captured = self.board.play_move(from, to)?;
+
+        if let Some(piece) = captured {
+            self.score[color as usize] += piece.value();
         }
-        self.history.push(self.board); // will copy
-        true
+
+        self.history.push(self.board);
+
+        Ok(())
     }
 }

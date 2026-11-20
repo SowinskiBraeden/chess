@@ -6,10 +6,18 @@ use super::movegen;
 use super::piece::{Color, Piece};
 use std::{char, fmt};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MoveError {
+    InvalidSquare,
+    EmptySquare,
+    WrongTurn,
+    IllegalMove,
+}
+
 #[derive(Clone, Copy)]
 pub struct Board {
     pub pieces: [[u64; 6]; 2], // [color][piece] -> u64 bitboard
-    turn: Color,
+    pub turn: Color,
     castling_rights: u8,
     en_passant: Option<u8>,
     halfmove_clock: u16,
@@ -76,8 +84,16 @@ impl Board {
 
     // Move piece from square to square, remove enemy if captured
     // unchecked: doesnt determine if valid move, assumes to/from is valid for a given piece
-    fn apply_move_unchecked(&mut self, color: Color, piece: Piece, from: u8, to: u8) {
+    fn apply_move_unchecked(
+        &mut self,
+        color: Color,
+        piece: Piece,
+        from: u8,
+        to: u8,
+    ) -> Option<Piece> {
         let to_bitboard = 1u64 << to;
+
+        let mut captured = None;
 
         // remove enemy if captured
         if self.occupancy(color.opposite()) & to_bitboard != 0 {
@@ -87,6 +103,7 @@ impl Board {
             };
             self.set_bitboard(ec, ep, self.pieces[ec as usize][ep as usize] & !to_bitboard);
             // self.score[color as usize] += ep.value();
+            captured = Some(ep);
         }
 
         // move piece to destination
@@ -95,6 +112,8 @@ impl Board {
             piece,
             self.pieces[color as usize][piece as usize] & !(1u64 << from) | to_bitboard,
         );
+
+        captured
     }
 
     /*
@@ -191,24 +210,25 @@ impl Board {
         moves
     }
 
-    pub fn play_move(&mut self, from: u8, to: u8) -> bool {
-        assert!(from < 64, "play_move: invalid from square index");
-        assert!(to < 64, "play_move: invalid to square index");
-        let move_opts = self.moves(from);
-
-        if move_opts & 1u64 << to == 0 {
-            return false;
+    pub fn play_move(&mut self, from: u8, to: u8) -> Result<Option<Piece>, MoveError> {
+        if from >= 64 || to >= 64 {
+            return Err(MoveError::InvalidSquare);
         }
 
-        let (color, piece) = match self.square_to_piece(from) {
-            Some(r) => r,
-            None => return false,
-        };
+        let (color, piece) = self.square_to_piece(from).ok_or(MoveError::EmptySquare)?;
 
-        self.apply_move_unchecked(color, piece, from, to);
+        if color != self.turn {
+            return Err(MoveError::WrongTurn);
+        }
+
+        if self.moves(from) & (1u64 << to) == 0 {
+            return Err(MoveError::IllegalMove);
+        }
+
+        let captured_piece = self.apply_move_unchecked(color, piece, from, to);
         self.turn = self.turn.opposite();
 
-        true
+        Ok(captured_piece)
     }
 }
 
