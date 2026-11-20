@@ -23,6 +23,53 @@ mod init_positions {
     pub const BLACK_ROOK_INIT:   u64 = 0x8100_0000_0000_0000; // r8: 1000 0001
     pub const BLACK_QUEEN_INIT:  u64 = 0x0800_0000_0000_0000; // r8: 0001 0000
     pub const BLACK_KING_INIT:   u64 = 0x1000_0000_0000_0000; // r8: 0000 1000
+
+    // Starting squares of rookks for castling
+    pub const WHITE_QUEEN_SIDE_ROOK: u8 = 0;
+    pub const WHITE_KING_SIDE_ROOK:  u8 = 7;
+    pub const BLACK_QUEEN_SIDE_ROOK: u8 = 56;
+    pub const BLACK_KING_SIDE_ROOK:  u8 = 63;
+}
+
+#[rustfmt::skip]
+pub mod castle_rights {
+    pub const WHITE_KING_SIDE:  u8 = 0b0001;
+    pub const WHITE_QUEEN_SIDE: u8 = 0b0010;
+    pub const BLACK_KING_SIDE:  u8 = 0b0100;
+    pub const BLACK_QUEEN_SIDE: u8 = 0b1000;
+
+    pub const WHITE: u8 = WHITE_KING_SIDE | WHITE_QUEEN_SIDE;
+    pub const BLACK: u8 = BLACK_KING_SIDE | BLACK_QUEEN_SIDE;
+    pub const ALL:   u8 = WHITE | BLACK;
+}
+
+#[rustfmt::skip]
+pub mod castle_paths {
+    // Squares that must be empty.
+    pub const WHITE_KING_SIDE:  u64 = 0x0000_0000_0000_0060;
+    pub const WHITE_QUEEN_SIDE: u64 = 0x0000_0000_0000_000E;
+    pub const BLACK_KING_SIDE:  u64 = 0x6000_0000_0000_0000;
+    pub const BLACK_QUEEN_SIDE: u64 = 0x0E00_0000_0000_0000;
+}
+
+#[rustfmt::skip]
+pub mod castle_files {
+    pub const KING_START:      u8 = 4; // E
+
+    pub const KING_SIDE_DEST:  u8 = 6; // G
+    pub const QUEEN_SIDE_DEST: u8 = 2; // C
+
+    pub const KING_SIDE_ROOK:  u8 = 7; // H
+    pub const QUEEN_SIDE_ROOK: u8 = 0; // A
+
+    pub const KING_SIDE_ROOK_DEST:  u8 = 5; // F
+    pub const QUEEN_SIDE_ROOK_DEST: u8 = 3; // D
+}
+
+pub mod castle_safe {
+    // Includes the kings starting square.
+    pub const KING_SIDE: u64 = 0x70; // E, F, G
+    pub const QUEEN_SIDE: u64 = 0x1C; // C, D, E
 }
 
 pub use init_positions::*;

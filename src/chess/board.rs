@@ -28,7 +28,7 @@ impl Board {
         let mut board = Board {
             pieces: [[0u64; 6]; 2],
             turn: Color::White,
-            castling_rights: 0,
+            castling_rights: bitboard::castle_rights::ALL,
             en_passant: None,
             halfmove_clock: 0,
         };
@@ -82,6 +82,34 @@ impl Board {
         attacks
     }
 
+    fn handle_castle_rights(&mut self, color: Color, piece: Piece, from: u8) {
+        use bitboard::castle_rights;
+
+        let (queen_side, king_side, queen_rook, king_rook) = match color {
+            Color::White => (
+                castle_rights::WHITE_QUEEN_SIDE,
+                castle_rights::WHITE_KING_SIDE,
+                bitboard::WHITE_QUEEN_SIDE_ROOK,
+                bitboard::WHITE_KING_SIDE_ROOK,
+            ),
+            Color::Black => (
+                castle_rights::BLACK_QUEEN_SIDE,
+                castle_rights::BLACK_KING_SIDE,
+                bitboard::BLACK_QUEEN_SIDE_ROOK,
+                bitboard::BLACK_KING_SIDE_ROOK,
+            ),
+        };
+
+        let revoke = match piece {
+            Piece::King => king_side | queen_side,
+            Piece::Rook if from == queen_rook => queen_side,
+            Piece::Rook if from == king_rook => king_side,
+            _ => 0,
+        };
+
+        self.castling_rights &= !revoke;
+    }
+
     // Move piece from square to square, remove enemy if captured
     // unchecked: doesnt determine if valid move, assumes to/from is valid for a given piece
     fn apply_move_unchecked(
@@ -92,8 +120,7 @@ impl Board {
         to: u8,
     ) -> Option<Piece> {
         let to_bitboard = 1u64 << to;
-
-        let mut captured = None;
+        let mut captured: Option<Piece> = None;
 
         // remove enemy if captured
         if self.occupancy(color.opposite()) & to_bitboard != 0 {
@@ -102,8 +129,8 @@ impl Board {
                 None => panic!("apply_move_unchecked: cant find enemy piece/color"),
             };
             self.set_bitboard(ec, ep, self.pieces[ec as usize][ep as usize] & !to_bitboard);
-            // self.score[color as usize] += ep.value();
             captured = Some(ep);
+            self.handle_castle_rights(ec, ep, from);
         }
 
         // move piece to destination
@@ -112,6 +139,8 @@ impl Board {
             piece,
             self.pieces[color as usize][piece as usize] & !(1u64 << from) | to_bitboard,
         );
+
+        self.handle_castle_rights(color, piece, from);
 
         captured
     }
@@ -181,6 +210,58 @@ impl Board {
         moves
     }
 
+    fn castling_moves(&self, color: Color) -> u64 {
+        use bitboard::{castle_files as files, castle_paths, castle_rights, castle_safe};
+
+        let occupied = self.all_occupancy();
+        let attacks = self.all_attacks(color.opposite());
+        let rooks = self.pieces[color as usize][Piece::Rook as usize];
+        let king = self.pieces[color as usize][Piece::King as usize];
+
+        let (king_side, queen_side, king_path, queen_path, rank_offset) = match color {
+            Color::White => (
+                castle_rights::WHITE_KING_SIDE,
+                castle_rights::WHITE_QUEEN_SIDE,
+                castle_paths::WHITE_KING_SIDE,
+                castle_paths::WHITE_QUEEN_SIDE,
+                0,
+            ),
+            Color::Black => (
+                castle_rights::BLACK_KING_SIDE,
+                castle_rights::BLACK_QUEEN_SIDE,
+                castle_paths::BLACK_KING_SIDE,
+                castle_paths::BLACK_QUEEN_SIDE,
+                56,
+            ),
+        };
+
+        if king != 1u64 << (rank_offset + files::KING_START) {
+            return 0;
+        }
+
+        let mut moves = 0u64;
+
+        // Kingside
+        if self.castling_rights & king_side != 0
+            && rooks & (1u64 << (rank_offset + files::KING_SIDE_ROOK)) != 0
+            && occupied & king_path == 0
+            && attacks & (castle_safe::KING_SIDE << rank_offset) == 0
+        {
+            moves |= 1u64 << (rank_offset + files::KING_SIDE_DEST);
+        }
+
+        // Queenside
+        if self.castling_rights & queen_side != 0
+            && rooks & (1u64 << (rank_offset + files::QUEEN_SIDE_ROOK)) != 0
+            && occupied & queen_path == 0
+            && attacks & (castle_safe::QUEEN_SIDE << rank_offset) == 0
+        {
+            moves |= 1u64 << (rank_offset + files::QUEEN_SIDE_DEST);
+        }
+
+        moves
+    }
+
     // legal moves for a given square
     pub fn moves(&self, square: u8) -> u64 {
         assert!(square < 64, "invalid square index");
@@ -197,6 +278,10 @@ impl Board {
         // generate pseudo-legal moves only
         let mut moves = match piece {
             Piece::Pawn => self.pawn_moves(color, square),
+            Piece::King => {
+                (movegen::king_attacks(square) & !self.occupancy(color))
+                    | self.castling_moves(color, square)
+            }
             _ => {
                 // every other piece move is simple and can be determined here
                 movegen::attacks(color, piece, square, self.all_occupancy())
