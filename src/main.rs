@@ -15,21 +15,22 @@ fn main() {
         game.pieces[Color::White as usize][Piece::Pawn as usize] & !(1u64 << 11),
     );
     game.set_bitboard(
-        Color::White, 
-        Piece::Knight, 
-        game.pieces[Color::White as usize][Piece::Knight as usize] | (1u64 << 19));
+        Color::White,
+        Piece::Knight,
+        game.pieces[Color::White as usize][Piece::Knight as usize] | (1u64 << 19),
+    );
 
     println!("{game}");
 
     println!("\nDebug Black Attacks");
-    debug_bitboard(game.all_attacks(Color::Black, game.all_occupancy()), 25);
+    debug_bitboard(game.all_attacks(Color::Black), 25);
 
     println!("\nDebug White King in check");
     debug_bitboard(game.moves(4), 4);
 
     println!("\nDebug White knight can save");
     debug_bitboard(game.moves(19), 19);
-    
+
     println!("\nDebug White pawn can save");
     debug_bitboard(game.moves(10), 10);
 
