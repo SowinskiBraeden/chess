@@ -136,38 +136,44 @@ impl Board {
         attacks
     }
 
+    // Move piece from square to square, remove enemy if captured
+    // unchecked: doesnt determine if valid move, assumes to/from is valid for a given piece
+    fn apply_move_unchecked(&mut self, color: Color, piece: Piece, from: u8, to: u8) {
+        let to_bitboard = 1u64 << to;
+
+        // remove enemy if captured
+        if self.occupancy(color.opposite()) & to_bitboard != 0 {
+            let (ec, ep) = match self.square_to_piece(to) {
+                Some(r) => r,
+                None => panic!("apply_move_unchecked: cant find enemy piece/color"),
+            };
+            self.set_bitboard(ec, ep, self.pieces[ec as usize][ep as usize] & !to_bitboard);
+        }
+
+        // move piece to destination
+        self.set_bitboard(
+            color,
+            piece,
+            self.pieces[color as usize][piece as usize] & !(1u64 << from) | to_bitboard,
+        );
+    }
+
     /*
      * checks a bitboard of psuedo-legal moves (possible moves without
      * checking king safety) removes illegal moves (putting king in check),
      * or saving king from check
      */
     fn filter_legal_moves(&self, moves: &mut u64, starting_square: u8, color: Color, piece: Piece) {
-        let enemy = color.opposite();
         let squares = board_to_squares(*moves);
-        for s in squares {
-            // clone current state, and apply moves/captures for each possible move in squares
-            let to = 1u64 << s;
-            let mut next_board = *self; // copy board
+        for dest in squares {
+            // copy current state, and apply moves/captures for each possible dest in squares
+            let mut next_board = *self;
 
-            // remove enemy if captured
-            if next_board.occupancy(enemy) & to != 0 {
-                let (ep, ec) = match next_board.square_to_piece(s) {
-                    Some(r) => r,
-                    None => panic!("filter_legal_moves: cant determine enemy (s) piece/color"),
-                };
-                next_board.set_bitboard(ec, ep, next_board.pieces[ec as usize][ep as usize] & !to);
-            }
-
-            // move piece to possible `to` square destination
-            next_board.set_bitboard(
-                color,
-                piece,
-                next_board.pieces[color as usize][piece as usize] & !(1u64 << starting_square) | to,
-            );
+            next_board.apply_move_unchecked(color, piece, starting_square, dest);
 
             // filter out moves that leave king under attack
             if next_board.king_under_attack(color) {
-                *moves &= !to;
+                *moves &= !(1u64 << dest);
             }
         }
     }
@@ -179,13 +185,13 @@ impl Board {
         attacks & king != 0
     }
 
-    fn square_to_piece(&self, square: u8) -> Option<(Piece, Color)> {
+    fn square_to_piece(&self, square: u8) -> Option<(Color, Piece)> {
         assert!(square < 64, "invalid square index");
         let bit = 1u64 << square;
         for color in 0..2 {
             for piece in 0..6 {
                 if self.pieces[color][piece] & bit != 0 {
-                    return Some((Piece::from(piece), Color::from(color)));
+                    return Some((Color::from(color), Piece::from(piece)));
                 }
             }
         }
@@ -217,11 +223,12 @@ impl Board {
         moves
     }
 
+    // legal moves for a given square
     pub fn moves(&self, square: u8) -> u64 {
         assert!(square < 64, "invalid square index");
 
-        let (piece, color) = match self.square_to_piece(square) {
-            Some((p, c)) => (p, c),
+        let (color, piece) = match self.square_to_piece(square) {
+            Some(r) => r,
             None => return 0u64,
         };
 
@@ -229,6 +236,7 @@ impl Board {
             return 0u64;
         }
 
+        // generate pseudo-legal moves only
         let mut moves = match piece {
             Piece::Pawn => self.pawn_moves(color, square),
             _ => {
@@ -238,7 +246,7 @@ impl Board {
             }
         };
 
-        // prevent king capture + filter psuedo-legal moves into just legal moves
+        // prevent king capture + filter for just legal moves
         moves &= !self.pieces[color.opposite() as usize][Piece::King as usize];
         self.filter_legal_moves(&mut moves, square, color, piece);
         moves
