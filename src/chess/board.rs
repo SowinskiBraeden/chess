@@ -10,6 +10,9 @@ use std::{char, fmt};
 pub struct Board {
     pub pieces: [[u64; 6]; 2], // [color][piece] -> u64 bitboard
     turn: Color,
+    castling_rights: u8,
+    en_passant: Option<u8>,
+    halfmove_clock: u16,
 }
 
 impl Board {
@@ -17,6 +20,9 @@ impl Board {
         let mut board = Board {
             pieces: [[0u64; 6]; 2],
             turn: Color::White,
+            castling_rights: 0,
+            en_passant: None,
+            halfmove_clock: 0,
         };
 
         let white = Color::White as usize;
@@ -43,16 +49,17 @@ impl Board {
         self.pieces[color as usize][piece as usize] = bitboard;
     }
 
-    pub fn occupancy(&self, color: Color) -> u64 {
+    fn occupancy(&self, color: Color) -> u64 {
         self.pieces[color as usize]
             .iter()
             .fold(0, |occupied, bitboard| occupied | bitboard)
     }
 
-    pub fn all_occupancy(&self) -> u64 {
+    fn all_occupancy(&self) -> u64 {
         self.occupancy(Color::White) | self.occupancy(Color::Black)
     }
 
+    // pub for debug purposes
     pub fn all_attacks(&self, color: Color) -> u64 {
         let occupied = self.all_occupancy();
         let mut attacks = 0u64;
@@ -182,6 +189,26 @@ impl Board {
         moves &= !self.pieces[color.opposite() as usize][Piece::King as usize];
         self.filter_legal_moves(&mut moves, square, color, piece);
         moves
+    }
+
+    pub fn play_move(&mut self, from: u8, to: u8) -> bool {
+        assert!(from < 64, "play_move: invalid from square index");
+        assert!(to < 64, "play_move: invalid to square index");
+        let move_opts = self.moves(from);
+
+        if move_opts & 1u64 << to == 0 {
+            return false;
+        }
+
+        let (color, piece) = match self.square_to_piece(from) {
+            Some(r) => r,
+            None => return false,
+        };
+
+        self.apply_move_unchecked(color, piece, from, to);
+        self.turn = self.turn.opposite();
+
+        true
     }
 }
 
