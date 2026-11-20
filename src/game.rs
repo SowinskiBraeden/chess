@@ -148,6 +148,7 @@ impl Board {
                 None => panic!("apply_move_unchecked: cant find enemy piece/color"),
             };
             self.set_bitboard(ec, ep, self.pieces[ec as usize][ep as usize] & !to_bitboard);
+            self.score[color as usize] += ep.value();
         }
 
         // move piece to destination
