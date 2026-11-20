@@ -38,4 +38,23 @@ impl Game {
 
         Ok(())
     }
+
+    /*
+     * read only
+     */
+    pub fn board(&self) -> &Board {
+        &self.board
+    }
+
+    pub fn score(&self, color: Color) -> u8 {
+        self.score[color as usize]
+    }
+
+    pub fn status(&self) -> &GameStatus {
+        &self.status
+    }
+
+    pub fn history(&self) -> &[Board] {
+        &self.history
+    }
 }

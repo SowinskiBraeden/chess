@@ -143,7 +143,7 @@ impl Board {
         attacks & king != 0
     }
 
-    fn square_to_piece(&self, square: u8) -> Option<(Color, Piece)> {
+    pub fn square_to_piece(&self, square: u8) -> Option<(Color, Piece)> {
         assert!(square < 64, "invalid square index");
         let bit = 1u64 << square;
         for color in 0..2 {
