@@ -1,83 +1,15 @@
 // ref: https://chessprogramming.org/Bitboards
 
-use crate::bitboard_constants;
-use crate::movegen;
+use super::bitboard;
+use super::bitboard::bitboard_to_squares;
+use super::movegen;
+use super::piece::{Color, Piece};
 use std::{char, fmt};
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(usize)]
-pub enum Color {
-    White,
-    Black,
-}
-
-impl Color {
-    fn opposite(&self) -> Color {
-        match self {
-            Color::White => Color::Black,
-            Color::Black => Color::White,
-        }
-    }
-
-    fn from(value: usize) -> Color {
-        assert!(value < 2, "invalid color id");
-        match value {
-            0 => Color::White,
-            _ => Color::Black,
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-#[repr(usize)]
-pub enum Piece {
-    Pawn,
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-    King,
-}
-
-impl Piece {
-    fn value(&self) -> u8 {
-        match self {
-            Piece::Pawn => 1,
-            Piece::Knight | Piece::Bishop => 3,
-            Piece::Rook => 5,
-            Piece::Queen => 9,
-            Piece::King => 10,
-        }
-    }
-
-    fn from(value: usize) -> Piece {
-        assert!(value < 6, "invalid piece id");
-        match value {
-            0 => Piece::Pawn,
-            1 => Piece::Knight,
-            2 => Piece::Bishop,
-            3 => Piece::Rook,
-            4 => Piece::Queen,
-            _ => Piece::King,
-        }
-    }
-}
 
 #[derive(Clone, Copy)]
 pub struct Board {
     pub pieces: [[u64; 6]; 2], // [color][piece] -> u64 bitboard
     turn: Color,
-    score: [u8; 2], // [color] -> score
-}
-
-// Iterate only over set bits
-fn board_to_squares(mut board: u64) -> Vec<u8> {
-    let mut squares = Vec::new();
-    while board != 0 {
-        squares.push(board.trailing_zeros() as u8);
-        board &= board - 1;
-    }
-    squares
 }
 
 impl Board {
@@ -85,25 +17,24 @@ impl Board {
         let mut board = Board {
             pieces: [[0u64; 6]; 2],
             turn: Color::White,
-            score: [0, 0],
         };
 
         let white = Color::White as usize;
         let black = Color::Black as usize;
 
-        board.pieces[white][Piece::Pawn as usize] = bitboard_constants::WHITE_PAWN_INIT;
-        board.pieces[white][Piece::Knight as usize] = bitboard_constants::WHITE_KNIGHT_INIT;
-        board.pieces[white][Piece::Bishop as usize] = bitboard_constants::WHITE_BISHOP_INIT;
-        board.pieces[white][Piece::Rook as usize] = bitboard_constants::WHITE_ROOK_INIT;
-        board.pieces[white][Piece::Queen as usize] = bitboard_constants::WHITE_QUEEN_INIT;
-        board.pieces[white][Piece::King as usize] = bitboard_constants::WHITE_KING_INIT;
+        board.pieces[white][Piece::Pawn as usize] = bitboard::WHITE_PAWN_INIT;
+        board.pieces[white][Piece::Knight as usize] = bitboard::WHITE_KNIGHT_INIT;
+        board.pieces[white][Piece::Bishop as usize] = bitboard::WHITE_BISHOP_INIT;
+        board.pieces[white][Piece::Rook as usize] = bitboard::WHITE_ROOK_INIT;
+        board.pieces[white][Piece::Queen as usize] = bitboard::WHITE_QUEEN_INIT;
+        board.pieces[white][Piece::King as usize] = bitboard::WHITE_KING_INIT;
 
-        board.pieces[black][Piece::Pawn as usize] = bitboard_constants::BLACK_PAWN_INIT;
-        board.pieces[black][Piece::Knight as usize] = bitboard_constants::BLACK_KNIGHT_INIT;
-        board.pieces[black][Piece::Bishop as usize] = bitboard_constants::BLACK_BISHOP_INIT;
-        board.pieces[black][Piece::Rook as usize] = bitboard_constants::BLACK_ROOK_INIT;
-        board.pieces[black][Piece::Queen as usize] = bitboard_constants::BLACK_QUEEN_INIT;
-        board.pieces[black][Piece::King as usize] = bitboard_constants::BLACK_KING_INIT;
+        board.pieces[black][Piece::Pawn as usize] = bitboard::BLACK_PAWN_INIT;
+        board.pieces[black][Piece::Knight as usize] = bitboard::BLACK_KNIGHT_INIT;
+        board.pieces[black][Piece::Bishop as usize] = bitboard::BLACK_BISHOP_INIT;
+        board.pieces[black][Piece::Rook as usize] = bitboard::BLACK_ROOK_INIT;
+        board.pieces[black][Piece::Queen as usize] = bitboard::BLACK_QUEEN_INIT;
+        board.pieces[black][Piece::King as usize] = bitboard::BLACK_KING_INIT;
 
         board
     }
@@ -126,7 +57,7 @@ impl Board {
         let occupied = self.all_occupancy();
         let mut attacks = 0u64;
         for (piece, bitboard) in self.pieces[color as usize].iter().enumerate() {
-            let squares = board_to_squares(*bitboard);
+            let squares = bitboard_to_squares(*bitboard);
             let piece = Piece::from(piece);
             for square in squares {
                 attacks |= movegen::attacks(color, piece, square, occupied);
@@ -148,7 +79,7 @@ impl Board {
                 None => panic!("apply_move_unchecked: cant find enemy piece/color"),
             };
             self.set_bitboard(ec, ep, self.pieces[ec as usize][ep as usize] & !to_bitboard);
-            self.score[color as usize] += ep.value();
+            // self.score[color as usize] += ep.value();
         }
 
         // move piece to destination
@@ -165,7 +96,7 @@ impl Board {
      * or saving king from check
      */
     fn filter_legal_moves(&self, moves: &mut u64, starting_square: u8, color: Color, piece: Piece) {
-        let squares = board_to_squares(*moves);
+        let squares = bitboard_to_squares(*moves);
         for dest in squares {
             // copy current state, and apply moves/captures for each possible dest in squares
             let mut next_board = *self;
@@ -286,29 +217,4 @@ impl fmt::Display for Board {
 
         writeln!(f, "   a b c d e f g h")
     }
-}
-
-// Useful for debugging attacks/moves
-pub fn debug_bitboard(b: u64, origin: u8) {
-    for rank in (0..8).rev() {
-        print!("{} ", rank + 1);
-
-        for file in 0..8 {
-            let s = rank * 8 + file;
-            let mask = 1u64 << s;
-            let mut symbol = '.';
-
-            if b & mask != 0 {
-                symbol = 'x';
-            }
-
-            if 1u64 << origin & mask != 0 {
-                symbol = '@';
-            }
-
-            print!(" {symbol}");
-        }
-        println!();
-    }
-    println!("   a b c d e f g h");
 }

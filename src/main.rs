@@ -1,9 +1,7 @@
 // ref: https://chessprogramming.org/Bitboards
 
-mod bitboard_constants;
-mod game;
-use game::{Board, Color, Piece, debug_bitboard};
-mod movegen;
+mod chess;
+use chess::{Board, Color, Piece, debug_bitboard};
 
 fn main() {
     let mut game = Board::new();

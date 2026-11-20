@@ -1,4 +1,6 @@
-use crate::game::{Color, Piece};
+// Raw attack calculations
+
+use super::piece::{Color, Piece};
 
 // . . . . . . . .
 // . . . . . . . .

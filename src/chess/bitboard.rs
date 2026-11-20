@@ -26,3 +26,38 @@ mod init_positions {
 }
 
 pub use init_positions::*;
+
+// Iterate only over set bits
+pub fn bitboard_to_squares(mut board: u64) -> Vec<u8> {
+    let mut squares = Vec::new();
+    while board != 0 {
+        squares.push(board.trailing_zeros() as u8);
+        board &= board - 1;
+    }
+    squares
+}
+
+// Useful for debugging attacks/moves
+pub fn debug_bitboard(b: u64, origin: u8) {
+    for rank in (0..8).rev() {
+        print!("{} ", rank + 1);
+
+        for file in 0..8 {
+            let s = rank * 8 + file;
+            let mask = 1u64 << s;
+            let mut symbol = '.';
+
+            if b & mask != 0 {
+                symbol = 'x';
+            }
+
+            if 1u64 << origin & mask != 0 {
+                symbol = '@';
+            }
+
+            print!(" {symbol}");
+        }
+        println!();
+    }
+    println!("   a b c d e f g h");
+}
