@@ -8,20 +8,33 @@ mod movegen;
 fn main() {
     let mut game = Board::new();
 
-    game.set_bitboard(Color::Black, Piece::Bishop, 1u64 << 33); // puts enemy bishop in sight of king on queen pawn move
+    game.set_bitboard(Color::Black, Piece::Bishop, 1u64 << 25); // puts enemy bishop in sight of king on queen pawn move
     game.set_bitboard(
         Color::White,
         Piece::Pawn,
-        game.pieces[Color::White as usize][Piece::Pawn as usize] & !(1u64 << 12),
+        game.pieces[Color::White as usize][Piece::Pawn as usize] & !(1u64 << 11),
     );
+    game.set_bitboard(
+        Color::White, 
+        Piece::Knight, 
+        game.pieces[Color::White as usize][Piece::Knight as usize] | (1u64 << 19));
 
     println!("{game}");
 
-    println!("\nDebug Attacks");
-    debug_bitboard(game.all_attacks(Color::Black, game.all_occupancy()), 33);
+    println!("\nDebug Black Attacks");
+    debug_bitboard(game.all_attacks(Color::Black, game.all_occupancy()), 25);
 
-    println!("\nDebug White King");
-    debug_bitboard(game.moves(Piece::King, 4, Color::White), 4);
+    println!("\nDebug White King in check");
+    debug_bitboard(game.moves(4), 4);
+
+    println!("\nDebug White knight can save");
+    debug_bitboard(game.moves(19), 19);
+    
+    println!("\nDebug White pawn can save");
+    debug_bitboard(game.moves(10), 10);
+
+    println!("\nDebug white pawn cannot save");
+    debug_bitboard(game.moves(9), 9);
 
     // println!("\nPawn Debug White");
     // debug_bitboard(movegen::pawn_attacks(20, Color::White), 20);
