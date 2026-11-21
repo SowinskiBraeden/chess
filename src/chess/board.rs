@@ -131,7 +131,7 @@ impl Board {
             };
             self.set_bitboard(ec, ep, self.pieces[ec as usize][ep as usize] & !to_bitboard);
             captured = Some(ep);
-            self.handle_castle_rights(ec, ep, from);
+            self.handle_castle_rights(ec, ep, to);
         }
 
         // move piece to destination
@@ -141,9 +141,49 @@ impl Board {
             self.pieces[color as usize][piece as usize] & !(1u64 << from) | to_bitboard,
         );
 
+        if piece == Piece::King {
+            self.handle_castle_rook_move(color, from, to);
+        }
+
         self.handle_castle_rights(color, piece, from);
 
         captured
+    }
+
+    // if this was a castling move (king moved 2 squares from its start square),
+    // move the corresponding rook alongside it
+    fn handle_castle_rook_move(&mut self, color: Color, from: u8, to: u8) {
+        use bitboard::castle_files as files;
+
+        let rank_offset = match color {
+            Color::White => 0,
+            Color::Black => 56,
+        };
+
+        if from != rank_offset + files::KING_START {
+            return;
+        }
+
+        let (rook_from, rook_to) = if to == rank_offset + files::KING_SIDE_DEST {
+            (
+                rank_offset + files::KING_SIDE_ROOK,
+                rank_offset + files::KING_SIDE_ROOK_DEST,
+            )
+        } else if to == rank_offset + files::QUEEN_SIDE_DEST {
+            (
+                rank_offset + files::QUEEN_SIDE_ROOK,
+                rank_offset + files::QUEEN_SIDE_ROOK_DEST,
+            )
+        } else {
+            return;
+        };
+
+        let rooks = self.pieces[color as usize][Piece::Rook as usize];
+        self.set_bitboard(
+            color,
+            Piece::Rook,
+            rooks & !(1u64 << rook_from) | (1u64 << rook_to),
+        );
     }
 
     // determine if move requires promotion

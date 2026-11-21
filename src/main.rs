@@ -266,6 +266,60 @@ fn test_stalemate(game: &mut Game) {
     println!("------------------");
 }
 
+fn test_white_castle_king(board: &mut Board) {
+    println!("\nDebug white caslte king side");
+
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    let _ = board.play_move(4, 6, None);
+    println!("\n{board}");
+    println!("------------------");
+}
+
+fn test_white_castle_queen(board: &mut Board) {
+    println!("\nDebug white caslte queen side");
+
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    let _ = board.play_move(4, 2, None);
+    println!("\n{board}");
+    println!("------------------");
+}
+
+fn test_black_castle_king(board: &mut Board) {
+    println!("\nDebug black caslte king side");
+
+    board.set_bitboard(Color::Black, Piece::Bishop, 0);
+    board.set_bitboard(Color::Black, Piece::Knight, 0);
+    board.set_bitboard(Color::Black, Piece::Queen, 0);
+    println!("{board}");
+    board.turn = Color::Black;
+    debug_bitboard(board.moves(60), 60);
+    let _ = board.play_move(60, 62, None);
+    println!("\n{board}");
+    println!("------------------");
+}
+
+fn test_black_castle_queen(board: &mut Board) {
+    println!("\nDebug black caslte queen side");
+
+    board.set_bitboard(Color::Black, Piece::Bishop, 0);
+    board.set_bitboard(Color::Black, Piece::Knight, 0);
+    board.set_bitboard(Color::Black, Piece::Queen, 0);
+    println!("{board}");
+    board.turn = Color::Black;
+    debug_bitboard(board.moves(60), 60);
+    let _ = board.play_move(60, 58, None);
+    println!("\n{board}");
+    println!("------------------");
+}
+
 fn main() {
     test_legal_move_filters(&mut Board::new());
 
@@ -283,4 +337,9 @@ fn main() {
     test_checkmate_nope_2(&mut Game::new());
 
     test_stalemate(&mut Game::new());
+
+    test_white_castle_king(&mut Board::new());
+    test_white_castle_queen(&mut Board::new());
+    test_black_castle_king(&mut Board::new());
+    test_black_castle_queen(&mut Board::new());
 }
