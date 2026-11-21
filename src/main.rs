@@ -241,7 +241,30 @@ fn test_checkmate_nope_2(game: &mut Game) {
     println!("------------------");
 }
 
-fn test_stalemate(game: &mut Game) {}
+fn test_stalemate(game: &mut Game) {
+    println!("\nDebug stalemate ");
+
+    let mut board = game.board;
+
+    board.set_bitboard(Color::Black, Piece::Pawn, 0);
+    board.set_bitboard(Color::Black, Piece::Knight, 0);
+    board.set_bitboard(Color::Black, Piece::Bishop, 0);
+    board.set_bitboard(Color::Black, Piece::Rook, (1u64 << 43) | (1u64 << 45));
+    board.set_bitboard(Color::Black, Piece::Queen, 1u64 << 8);
+
+    board.set_bitboard(Color::White, Piece::Pawn, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Rook, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+
+    game.board = board;
+    let stalemate = game.stalemate();
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    println!("Stalemate: {stalemate}");
+    println!("------------------");
+}
 
 fn main() {
     test_legal_move_filters(&mut Board::new());
@@ -258,4 +281,6 @@ fn main() {
     test_checkmate_black(&mut Game::new());
     test_checkmate_nope(&mut Game::new());
     test_checkmate_nope_2(&mut Game::new());
+
+    test_stalemate(&mut Game::new());
 }
