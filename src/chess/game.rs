@@ -71,4 +71,8 @@ impl Game {
     pub fn stalemate(&self) -> bool {
         !self.board.king_under_attack(self.board.turn) && !self.board.has_legal_moves()
     }
+
+    pub fn reset(&mut self) {
+        *self = Self::new();
+    }
 }
