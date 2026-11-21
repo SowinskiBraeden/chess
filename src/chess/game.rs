@@ -66,4 +66,9 @@ impl Game {
         }
         None
     }
+
+    // King not under attack, but no legal moves
+    pub fn stalemate(&self) -> bool {
+        !self.board.king_under_attack(self.board.turn) && !self.board.has_legal_moves()
+    }
 }
