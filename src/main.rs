@@ -3,62 +3,107 @@
 mod chess;
 use chess::{Board, Color, Piece, debug_bitboard};
 
-fn main() {
-    let mut game = Board::new();
-
-    game.set_bitboard(Color::Black, Piece::Bishop, 1u64 << 25); // puts enemy bishop in sight of king on queen pawn move
-    game.set_bitboard(
+fn test_legal_move_filters(board: &mut Board) {
+    board.set_bitboard(Color::Black, Piece::Bishop, 1u64 << 25); // puts enemy bishop in sight of king on queen pawn move
+    board.set_bitboard(
         Color::White,
         Piece::Pawn,
-        game.pieces[Color::White as usize][Piece::Pawn as usize] & !(1u64 << 11),
+        board.pieces[Color::White as usize][Piece::Pawn as usize] & !(1u64 << 11),
     );
-    game.set_bitboard(
+    board.set_bitboard(
         Color::White,
         Piece::Knight,
-        game.pieces[Color::White as usize][Piece::Knight as usize] | (1u64 << 19),
+        board.pieces[Color::White as usize][Piece::Knight as usize] | (1u64 << 19),
     );
 
-    println!("{game}");
+    println!("{board}");
 
     println!("\nDebug Black Attacks");
-    debug_bitboard(game.all_attacks(Color::Black), 25);
+    debug_bitboard(board.all_attacks(Color::Black), 25);
 
     println!("\nDebug White King in check");
-    debug_bitboard(game.moves(4), 4);
+    debug_bitboard(board.moves(4), 4);
 
     println!("\nDebug White knight can save");
-    debug_bitboard(game.moves(19), 19);
+    debug_bitboard(board.moves(19), 19);
 
     println!("\nDebug White pawn can save");
-    debug_bitboard(game.moves(10), 10);
+    debug_bitboard(board.moves(10), 10);
 
     println!("\nDebug white pawn cannot save");
-    debug_bitboard(game.moves(9), 9);
+    debug_bitboard(board.moves(9), 9);
+    println!("------------------");
+}
 
-    // println!("\nPawn Debug White");
-    // debug_bitboard(movegen::pawn_attacks(20, Color::White), 20);
+fn test_castle_1(board: &mut Board) {
+    println!("\nDebug castle both ways");
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    println!("------------------");
+}
 
-    // println!("\nPawn Debug Black");
-    // debug_bitboard(movegen::pawn_attacks(8, Color::Black), 8);
+fn test_castle_2(board: &mut Board) {
+    println!("\nDebug no castling (rights but blocked)");
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    println!("------------------");
+}
 
-    // println!("\nKnight Debug");
-    // debug_bitboard(movegen::knight_attacks(1), 1);
+fn test_castle_3(board: &mut Board) {
+    println!("\nDebug no castle kingside rights");
+    board.set_bitboard(Color::White, Piece::Pawn, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+    let _ = board.play_move(7, 15); // move kingside rook up 1
+    board.turn = Color::White; // force turn back to white for valid move gen
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    println!("------------------");
+}
 
-    // println!("\nKnight Debug");
-    // debug_bitboard(movegen::knight_attacks(27), 27);
+fn test_castle_4(board: &mut Board) {
+    println!("\nDebug no castle queenside rights");
+    board.set_bitboard(Color::White, Piece::Pawn, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+    let _ = board.play_move(0, 8); // move kingside rook
+    board.turn = Color::White; // force turn back to white for valid move gen
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    println!("------------------");
+}
 
-    // println!("\nBishop Debug");
-    // debug_bitboard(movegen::bishop_attacks(27, 0), 27);
+fn test_castle_5(board: &mut Board) {
+    println!("\nDebug no castling, no rights from king move");
+    board.set_bitboard(Color::White, Piece::Pawn, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+    let _ = board.play_move(4, 3); // move king to left
+    board.turn = Color::White; // force turn back to white for valid move gen
+    println!("{board}");
+    debug_bitboard(board.moves(3), 3);
+    println!("------------------");
+}
 
-    // println!("\nRook Debug");
-    // debug_bitboard(movegen::rook_attacks(26, 0), 26);
-
-    // println!("\nQueen Debug");
-    // debug_bitboard(movegen::queen_attacks(27, 0), 27);
-
-    // println!("\nKing Debug");
-    // debug_bitboard(movegen::king_attacks(27), 27);
-
-    // println!("\nKing Debug");
-    // debug_bitboard(movegen::king_attacks(7), 7);
+fn main() {
+    let mut board = Board::new();
+    test_legal_move_filters(&mut board);
+    board = Board::new();
+    test_castle_1(&mut board);
+    board = Board::new();
+    test_castle_2(&mut board);
+    board = Board::new();
+    test_castle_3(&mut board);
+    board = Board::new();
+    test_castle_4(&mut board);
+    board = Board::new();
+    test_castle_5(&mut board);
 }

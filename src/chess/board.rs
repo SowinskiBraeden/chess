@@ -280,7 +280,7 @@ impl Board {
             Piece::Pawn => self.pawn_moves(color, square),
             Piece::King => {
                 (movegen::king_attacks(square) & !self.occupancy(color))
-                    | self.castling_moves(color, square)
+                    | self.castling_moves(color)
             }
             _ => {
                 // every other piece move is simple and can be determined here
