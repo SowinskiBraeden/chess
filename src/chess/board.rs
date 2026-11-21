@@ -165,7 +165,18 @@ impl Board {
         }
     }
 
-    fn king_under_attack(&self, color: Color) -> bool {
+    // check if current turn as at least 1 legal move somewhere
+    pub fn has_legal_moves(&self) -> bool {
+        let occupied = self.occupancy(self.turn);
+        for square in bitboard::bitboard_to_squares(occupied) {
+            if self.moves(square) != 0 {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn king_under_attack(&self, color: Color) -> bool {
         let enemy = color.opposite();
         let attacks = self.all_attacks(enemy);
         let king = self.pieces[color as usize][Piece::King as usize];

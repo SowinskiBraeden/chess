@@ -1,5 +1,6 @@
+use super::bitboard;
 use super::board::MoveError;
-use super::{Board, Color};
+use super::{Board, Color, Piece};
 
 pub enum GameStatus {
     InProgress,
@@ -56,5 +57,13 @@ impl Game {
 
     pub fn history(&self) -> &[Board] {
         &self.history
+    }
+
+    pub fn checkmate(&self) -> Option<Color> {
+        let color = self.board.turn;
+        if self.board.king_under_attack(color) && self.board.has_legal_moves() {
+            return Some(color);
+        }
+        None
     }
 }
