@@ -60,7 +60,7 @@ fn test_castle_3(board: &mut Board) {
     board.set_bitboard(Color::White, Piece::Bishop, 0);
     board.set_bitboard(Color::White, Piece::Knight, 0);
     board.set_bitboard(Color::White, Piece::Queen, 0);
-    let _ = board.play_move(7, 15); // move kingside rook up 1
+    let _ = board.play_move(7, 15, None); // move kingside rook up 1
     board.turn = Color::White; // force turn back to white for valid move gen
     println!("{board}");
     debug_bitboard(board.moves(4), 4);
@@ -73,7 +73,7 @@ fn test_castle_4(board: &mut Board) {
     board.set_bitboard(Color::White, Piece::Bishop, 0);
     board.set_bitboard(Color::White, Piece::Knight, 0);
     board.set_bitboard(Color::White, Piece::Queen, 0);
-    let _ = board.play_move(0, 8); // move kingside rook
+    let _ = board.play_move(0, 8, None); // move kingside rook
     board.turn = Color::White; // force turn back to white for valid move gen
     println!("{board}");
     debug_bitboard(board.moves(4), 4);
@@ -86,16 +86,64 @@ fn test_castle_5(board: &mut Board) {
     board.set_bitboard(Color::White, Piece::Bishop, 0);
     board.set_bitboard(Color::White, Piece::Knight, 0);
     board.set_bitboard(Color::White, Piece::Queen, 0);
-    let _ = board.play_move(4, 3); // move king to left
+    let _ = board.play_move(4, 3, None); // move king to left
     board.turn = Color::White; // force turn back to white for valid move gen
     println!("{board}");
     debug_bitboard(board.moves(3), 3);
     println!("------------------");
 }
 
+fn test_promotion(board: &mut Board, piece: Piece) {
+    println!("\nDebug promotion");
+
+    board.set_bitboard(Color::Black, Piece::Pawn, 0);
+    board.set_bitboard(Color::Black, Piece::Knight, 0);
+    board.set_bitboard(Color::Black, Piece::Bishop, 0);
+    board.set_bitboard(Color::Black, Piece::Bishop, 0);
+    board.set_bitboard(Color::Black, Piece::Rook, 0);
+    board.set_bitboard(Color::Black, Piece::Queen, 0);
+
+    board.set_bitboard(Color::White, Piece::Pawn, 1u64 << 55); // one away from promotion
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Rook, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+
+    println!("{board}");
+    let r = board.play_move(55, 63, Some(piece));
+    println!("{board}");
+    if r.is_err() {
+        println!("invalid promotion");
+    };
+    println!("------------------");
+}
+
+fn test_promotion_fail(board: &mut Board) {
+    println!("\nDebug promotion fail");
+
+    board.set_bitboard(Color::Black, Piece::Pawn, 0);
+    board.set_bitboard(Color::Black, Piece::Knight, 0);
+    board.set_bitboard(Color::Black, Piece::Bishop, 0);
+    board.set_bitboard(Color::Black, Piece::Bishop, 0);
+    board.set_bitboard(Color::Black, Piece::Queen, 0);
+
+    board.set_bitboard(Color::White, Piece::Pawn, 1u64 << 55); // one away from promotion
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+
+    println!("{board}");
+    let _ = board.play_move(55, 64, Some(Piece::Knight));
+    println!("{board}");
+    println!("------------------");
+}
+
 fn main() {
     let mut board = Board::new();
     test_legal_move_filters(&mut board);
+
     board = Board::new();
     test_castle_1(&mut board);
     board = Board::new();
@@ -106,4 +154,10 @@ fn main() {
     test_castle_4(&mut board);
     board = Board::new();
     test_castle_5(&mut board);
+
+    board = Board::new();
+    test_promotion(&mut board, Piece::Queen);
+
+    board = Board::new();
+    test_promotion(&mut board, Piece::Pawn);
 }

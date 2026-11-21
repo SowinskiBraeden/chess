@@ -27,9 +27,9 @@ impl Game {
         }
     }
 
-    pub fn play_move(&mut self, from: u8, to: u8) -> Result<(), MoveError> {
+    pub fn play_move(&mut self, from: u8, to: u8, promote: Option<Piece>) -> Result<(), MoveError> {
         let color = self.board.turn;
-        let captured = self.board.play_move(from, to)?;
+        let captured = self.board.play_move(from, to, promote)?;
 
         if let Some(piece) = captured {
             self.score[color as usize] += piece.value();

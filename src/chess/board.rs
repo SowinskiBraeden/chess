@@ -12,6 +12,7 @@ pub enum MoveError {
     EmptySquare,
     WrongTurn,
     IllegalMove,
+    InvalidPromotion,
 }
 
 #[derive(Clone, Copy)]
@@ -143,6 +144,43 @@ impl Board {
         self.handle_castle_rights(color, piece, from);
 
         captured
+    }
+
+    // determine if move requires promotion
+    fn promoting(&self, color: Color, piece: Piece, to: u8) -> bool {
+        let promotion_rank = match color {
+            Color::White => 7,
+            Color::Black => 0,
+        };
+        let rank = to / 8;
+        piece == Piece::Pawn && rank == promotion_rank
+    }
+
+    // valid promotion choice?
+    fn valid_promotion(&self, promote: Option<Piece>) -> bool {
+        let promote = match promote {
+            None => None,
+            Some(p) => match p {
+                Piece::King => None,
+                Piece::Pawn => None,
+                _ => Some(p),
+            },
+        };
+        promote != None
+    }
+
+    fn handle_promotion(&mut self, color: Color, to: u8, promote: Piece) {
+        let mask = 1u64 << to;
+        self.set_bitboard(
+            color,
+            Piece::Pawn,
+            self.pieces[color as usize][Piece::Pawn as usize] & !mask,
+        );
+        self.set_bitboard(
+            color,
+            promote,
+            self.pieces[color as usize][promote as usize] | mask,
+        );
     }
 
     /*
@@ -306,7 +344,12 @@ impl Board {
         moves
     }
 
-    pub fn play_move(&mut self, from: u8, to: u8) -> Result<Option<Piece>, MoveError> {
+    pub fn play_move(
+        &mut self,
+        from: u8,
+        to: u8,
+        promote: Option<Piece>,
+    ) -> Result<Option<Piece>, MoveError> {
         if from >= 64 || to >= 64 {
             return Err(MoveError::InvalidSquare);
         }
@@ -321,7 +364,18 @@ impl Board {
             return Err(MoveError::IllegalMove);
         }
 
+        let promoting = self.promoting(color, piece, to);
+
+        // Check if promoting and valid promotion before applying move
+        if promoting && !self.valid_promotion(promote) {
+            return Err(MoveError::InvalidPromotion);
+        }
+
         let captured_piece = self.apply_move_unchecked(color, piece, from, to);
+
+        if promoting {
+            self.handle_promotion(color, to, promote.unwrap());
+        }
         self.turn = self.turn.opposite();
 
         Ok(captured_piece)
