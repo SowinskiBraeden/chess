@@ -1,7 +1,7 @@
 // ref: https://chessprogramming.org/Bitboards
 
 mod chess;
-use chess::{Board, Color, Piece, debug_bitboard};
+use chess::{Board, Color, Game, Piece, debug_bitboard};
 
 fn test_legal_move_filters(board: &mut Board) {
     board.set_bitboard(Color::Black, Piece::Bishop, 1u64 << 25); // puts enemy bishop in sight of king on queen pawn move
@@ -99,13 +99,11 @@ fn test_promotion(board: &mut Board, piece: Piece) {
     board.set_bitboard(Color::Black, Piece::Pawn, 0);
     board.set_bitboard(Color::Black, Piece::Knight, 0);
     board.set_bitboard(Color::Black, Piece::Bishop, 0);
-    board.set_bitboard(Color::Black, Piece::Bishop, 0);
     board.set_bitboard(Color::Black, Piece::Rook, 0);
     board.set_bitboard(Color::Black, Piece::Queen, 0);
 
     board.set_bitboard(Color::White, Piece::Pawn, 1u64 << 55); // one away from promotion
     board.set_bitboard(Color::White, Piece::Knight, 0);
-    board.set_bitboard(Color::White, Piece::Bishop, 0);
     board.set_bitboard(Color::White, Piece::Bishop, 0);
     board.set_bitboard(Color::White, Piece::Rook, 0);
     board.set_bitboard(Color::White, Piece::Queen, 0);
@@ -131,7 +129,7 @@ fn test_promotion_fail(board: &mut Board) {
     board.set_bitboard(Color::White, Piece::Pawn, 1u64 << 55); // one away from promotion
     board.set_bitboard(Color::White, Piece::Knight, 0);
     board.set_bitboard(Color::White, Piece::Bishop, 0);
-    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Rook, 0);
     board.set_bitboard(Color::White, Piece::Queen, 0);
 
     println!("{board}");
@@ -140,24 +138,124 @@ fn test_promotion_fail(board: &mut Board) {
     println!("------------------");
 }
 
+fn test_checkmate_white(game: &mut Game) {
+    println!("\nDebug checkmate white");
+
+    let mut board = game.board;
+
+    board.set_bitboard(Color::Black, Piece::Pawn, 0);
+    board.set_bitboard(Color::Black, Piece::Knight, 0);
+    board.set_bitboard(Color::Black, Piece::Bishop, 1u64 << 33);
+    board.set_bitboard(Color::Black, Piece::Rook, 0);
+    board.set_bitboard(Color::Black, Piece::Queen, 1u64 << 12);
+
+    board.set_bitboard(Color::White, Piece::Pawn, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Rook, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+
+    game.board = board;
+    let checkmate = game.checkmate();
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    println!("Checkmate: {checkmate:?}");
+    println!("------------------");
+}
+
+fn test_checkmate_black(game: &mut Game) {
+    println!("\nDebug checkmate black");
+
+    let mut board = game.board;
+
+    board.set_bitboard(Color::White, Piece::Pawn, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 1u64 << 33);
+    board.set_bitboard(Color::White, Piece::Rook, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 1u64 << 12);
+
+    board.set_bitboard(Color::Black, Piece::Pawn, 0);
+    board.set_bitboard(Color::Black, Piece::Knight, 0);
+    board.set_bitboard(Color::Black, Piece::Bishop, 0);
+    board.set_bitboard(Color::Black, Piece::Rook, 0);
+    board.set_bitboard(Color::Black, Piece::Queen, 0);
+    board.set_bitboard(Color::Black, Piece::King, 1u64 << 4);
+
+    game.board = board;
+    game.board.turn = Color::Black; // checkmate looks at current turn
+    let checkmate = game.checkmate();
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    println!("Checkmate: {checkmate:?}");
+    println!("------------------");
+}
+
+fn test_checkmate_nope(game: &mut Game) {
+    println!("\nDebug checkmate white nope can capture");
+
+    let mut board = game.board;
+
+    board.set_bitboard(Color::Black, Piece::Pawn, 0);
+    board.set_bitboard(Color::Black, Piece::Knight, 0);
+    board.set_bitboard(Color::Black, Piece::Bishop, 0);
+    board.set_bitboard(Color::Black, Piece::Rook, 0);
+    board.set_bitboard(Color::Black, Piece::Queen, 1u64 << 12);
+
+    board.set_bitboard(Color::White, Piece::Pawn, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Rook, 0);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+
+    game.board = board;
+    let checkmate = game.checkmate();
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    println!("Checkmate: {checkmate:?}");
+    println!("------------------");
+}
+
+fn test_checkmate_nope_2(game: &mut Game) {
+    println!("\nDebug checkmate white nope can block");
+
+    let mut board = game.board;
+
+    board.set_bitboard(Color::Black, Piece::Pawn, 0);
+    board.set_bitboard(Color::Black, Piece::Knight, 0);
+    board.set_bitboard(Color::Black, Piece::Bishop, 0);
+    board.set_bitboard(Color::Black, Piece::Rook, (1u64 << 43) | (1u64 << 45));
+    board.set_bitboard(Color::Black, Piece::Queen, 1u64 << 44);
+
+    board.set_bitboard(Color::White, Piece::Pawn, 0);
+    board.set_bitboard(Color::White, Piece::Knight, 0);
+    board.set_bitboard(Color::White, Piece::Bishop, 0);
+    board.set_bitboard(Color::White, Piece::Rook, 1u64 << 16);
+    board.set_bitboard(Color::White, Piece::Queen, 0);
+
+    game.board = board;
+    let checkmate = game.checkmate();
+    println!("{board}");
+    debug_bitboard(board.moves(4), 4);
+    debug_bitboard(board.moves(16), 16);
+    println!("Checkmate: {checkmate:?}");
+    println!("------------------");
+}
+
+fn test_stalemate(game: &mut Game) {}
+
 fn main() {
-    let mut board = Board::new();
-    test_legal_move_filters(&mut board);
+    test_legal_move_filters(&mut Board::new());
 
-    board = Board::new();
-    test_castle_1(&mut board);
-    board = Board::new();
-    test_castle_2(&mut board);
-    board = Board::new();
-    test_castle_3(&mut board);
-    board = Board::new();
-    test_castle_4(&mut board);
-    board = Board::new();
-    test_castle_5(&mut board);
+    test_castle_1(&mut Board::new());
+    test_castle_2(&mut Board::new());
+    test_castle_3(&mut Board::new());
+    test_castle_4(&mut Board::new());
+    test_castle_5(&mut Board::new());
+    test_promotion(&mut Board::new(), Piece::Queen);
+    test_promotion(&mut Board::new(), Piece::Pawn);
 
-    board = Board::new();
-    test_promotion(&mut board, Piece::Queen);
-
-    board = Board::new();
-    test_promotion(&mut board, Piece::Pawn);
+    test_checkmate_white(&mut Game::new());
+    test_checkmate_black(&mut Game::new());
+    test_checkmate_nope(&mut Game::new());
+    test_checkmate_nope_2(&mut Game::new());
 }

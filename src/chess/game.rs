@@ -10,7 +10,7 @@ pub enum GameStatus {
 }
 
 pub struct Game {
-    board: Board,
+    pub board: Board,
     history: Vec<Board>,
     score: [u8; 2], // [color] -> score,
     status: GameStatus,
@@ -61,7 +61,7 @@ impl Game {
 
     pub fn checkmate(&self) -> Option<Color> {
         let color = self.board.turn;
-        if self.board.king_under_attack(color) && self.board.has_legal_moves() {
+        if self.board.king_under_attack(color) && !self.board.has_legal_moves() {
             return Some(color);
         }
         None
