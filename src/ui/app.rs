@@ -1,4 +1,4 @@
-use crate::chess::Game;
+use crate::chess::{Color, Game, Piece};
 use eframe::egui;
 
 pub struct App {
@@ -12,6 +12,35 @@ impl Default for App {
             game: Game::new(),
             selected: None,
         }
+    }
+}
+
+fn piece_image(color: Color, piece: Piece) -> egui::ImageSource<'static> {
+    match (color, piece) {
+        (Color::White, Piece::Pawn) => egui::include_image!("../../assets/pieces/cburnett/wP.svg"),
+        (Color::White, Piece::Knight) => {
+            egui::include_image!("../../assets/pieces/cburnett/wN.svg")
+        }
+        (Color::White, Piece::Bishop) => {
+            egui::include_image!("../../assets/pieces/cburnett/wB.svg")
+        }
+        (Color::White, Piece::Rook) => egui::include_image!("../../assets/pieces/cburnett/wR.svg"),
+        (Color::White, Piece::Queen) => {
+            egui::include_image!("../../assets/pieces/cburnett/wQ.svg")
+        }
+        (Color::White, Piece::King) => egui::include_image!("../../assets/pieces/cburnett/wK.svg"),
+        (Color::Black, Piece::Pawn) => egui::include_image!("../../assets/pieces/cburnett/bP.svg"),
+        (Color::Black, Piece::Knight) => {
+            egui::include_image!("../../assets/pieces/cburnett/bN.svg")
+        }
+        (Color::Black, Piece::Bishop) => {
+            egui::include_image!("../../assets/pieces/cburnett/bB.svg")
+        }
+        (Color::Black, Piece::Rook) => egui::include_image!("../../assets/pieces/cburnett/bR.svg"),
+        (Color::Black, Piece::Queen) => {
+            egui::include_image!("../../assets/pieces/cburnett/bQ.svg")
+        }
+        (Color::Black, Piece::King) => egui::include_image!("../../assets/pieces/cburnett/bK.svg"),
     }
 }
 
@@ -40,6 +69,12 @@ impl eframe::App for App {
                 };
 
                 painter.rect_filled(rect, 0, color);
+
+                if let Some((piece_color, piece)) =
+                    self.game.board().square_to_piece(sq_index as u8)
+                {
+                    egui::Image::new(piece_image(piece_color, piece)).paint_at(ui, rect);
+                }
             }
         }
     }

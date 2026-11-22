@@ -9,6 +9,9 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Chess",
         options,
-        Box::new(|_cc| Ok(Box::new(ui::App::default()))),
+        Box::new(|cc| {
+            egui_extras::install_image_loaders(&cc.egui_ctx);
+            Ok(Box::new(ui::App::default()))
+        }),
     )
 }
