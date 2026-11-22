@@ -2,6 +2,7 @@ use super::bitboard;
 use super::board::MoveError;
 use super::{Board, Color, Piece};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameStatus {
     InProgress,
     Checkmate(Color),
@@ -13,6 +14,7 @@ pub struct Game {
     pub board: Board,
     history: Vec<Board>,
     score: [u8; 2], // [color] -> score,
+    captured: Vec<(Color, Piece)>, // (color of captured piece, piece), in capture order
     status: GameStatus,
 }
 
@@ -23,6 +25,7 @@ impl Game {
             board: board,
             history: vec![board],
             score: [0u8; 2],
+            captured: Vec::new(),
             status: GameStatus::InProgress,
         }
     }
@@ -33,9 +36,18 @@ impl Game {
 
         if let Some(piece) = captured {
             self.score[color as usize] += piece.value();
+            self.captured.push((color.opposite(), piece));
         }
 
         self.history.push(self.board);
+
+        self.status = if let Some(color) = self.checkmate() {
+            GameStatus::Checkmate(color)
+        } else if self.stalemate() {
+            GameStatus::Stalemate
+        } else {
+            GameStatus::InProgress
+        };
 
         Ok(())
     }
@@ -49,6 +61,10 @@ impl Game {
 
     pub fn score(&self, color: Color) -> u8 {
         self.score[color as usize]
+    }
+
+    pub fn captured(&self) -> &[(Color, Piece)] {
+        &self.captured
     }
 
     pub fn status(&self) -> &GameStatus {

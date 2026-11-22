@@ -7,5 +7,5 @@ mod square;
 
 pub use bitboard::debug_bitboard;
 pub use board::Board;
-pub use game::Game;
+pub use game::{Game, GameStatus};
 pub use piece::{Color, Piece};

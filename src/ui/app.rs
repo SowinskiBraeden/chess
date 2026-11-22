@@ -1,4 +1,4 @@
-use crate::chess::{Color, Game, Piece};
+use crate::chess::{Color, Game, GameStatus, Piece};
 use eframe::egui;
 
 pub struct App {
@@ -46,6 +46,10 @@ fn piece_image(color: Color, piece: Piece) -> egui::ImageSource<'static> {
 
 impl App {
     fn handle_click(&mut self, clicked: u8) {
+        if *self.game.status() != GameStatus::InProgress {
+            return;
+        }
+
         if let Some(from) = self.selected {
             if from == clicked {
                 self.selected = None;
@@ -67,7 +71,23 @@ impl App {
         };
     }
 
-    fn side_panel(&self, ui: &mut egui::Ui) {
+    fn captured_row(&self, ui: &mut egui::Ui, captured_color: Color) {
+        ui.horizontal_wrapped(|ui| {
+            for (color, piece) in self
+                .game
+                .captured()
+                .iter()
+                .filter(|(color, _)| *color == captured_color)
+            {
+                ui.add(
+                    egui::Image::new(piece_image(*color, *piece))
+                        .fit_to_exact_size(egui::vec2(20.0, 20.0)),
+                );
+            }
+        });
+    }
+
+    fn side_panel(&mut self, ui: &mut egui::Ui) {
         ui.heading("Chess");
         ui.separator();
 
@@ -78,8 +98,50 @@ impl App {
         ui.label(format!("Turn: {turn}"));
 
         ui.separator();
-        ui.label(format!("White score: {}", self.game.score(Color::White)));
-        ui.label(format!("Black score: {}", self.game.score(Color::Black)));
+        let diff = self.game.score(Color::White) as i32 - self.game.score(Color::Black) as i32;
+        let score_text = match diff.cmp(&0) {
+            std::cmp::Ordering::Greater => format!("+{diff} White"),
+            std::cmp::Ordering::Less => format!("+{} Black", -diff),
+            std::cmp::Ordering::Equal => "Even".to_string(),
+        };
+        ui.label(format!("Score: {score_text}"));
+
+        ui.separator();
+        ui.label("Captured by White:");
+        self.captured_row(ui, Color::Black);
+
+        ui.add_space(6.0);
+        ui.label("Captured by Black:");
+        self.captured_row(ui, Color::White);
+
+        match *self.game.status() {
+            GameStatus::InProgress => {}
+            GameStatus::Checkmate(loser) => {
+                let winner = match loser {
+                    Color::White => "Black",
+                    Color::Black => "White",
+                };
+                ui.separator();
+                ui.colored_label(
+                    egui::Color32::from_rgb(220, 170, 70),
+                    format!("Checkmate - {winner} wins!"),
+                );
+            }
+            GameStatus::Stalemate => {
+                ui.separator();
+                ui.colored_label(egui::Color32::from_rgb(220, 170, 70), "Stalemate — draw");
+            }
+            GameStatus::Draw => {
+                ui.separator();
+                ui.colored_label(egui::Color32::from_rgb(220, 170, 70), "Draw");
+            }
+        }
+
+        ui.add_space(6.0);
+        if ui.button("New Game").clicked() {
+            self.game.reset();
+            self.selected = None;
+        }
     }
 }
 
@@ -107,7 +169,9 @@ impl eframe::App for App {
             }
         }
 
-        let legal_moves = self.selected.map_or(0, |from| self.game.board().moves(from));
+        let legal_moves = self
+            .selected
+            .map_or(0, |from| self.game.board().moves(from));
 
         for rank in 0..8 {
             for file in 0..8 {
@@ -118,8 +182,6 @@ impl eframe::App for App {
 
                 let color = if Some(sq_index) == self.selected {
                     egui::Color32::from_rgb(130, 150, 90) // selected
-                } else if legal_moves & (1u64 << sq_index) != 0 {
-                    egui::Color32::from_rgb(90, 130, 150) // legal destination
                 } else if (rank + file) % 2 == 0 {
                     egui::Color32::from_rgb(70, 70, 70)
                 } else {
@@ -132,6 +194,14 @@ impl eframe::App for App {
                     self.game.board().square_to_piece(sq_index as u8)
                 {
                     egui::Image::new(piece_image(piece_color, piece)).paint_at(ui, rect);
+                }
+
+                if legal_moves & (1u64 << sq_index) != 0 {
+                    painter.circle_filled(
+                        rect.center(),
+                        square * 0.14,
+                        egui::Color32::from_rgba_unmultiplied(80, 200, 120, 170),
+                    );
                 }
             }
         }
