@@ -298,6 +298,62 @@ fn test_black_castle_queen(board: &mut Board) {
     println!("------------------");
 }
 
+fn test_en_passant_capture(board: &mut Board) {
+    println!("\nDebug en passant capture");
+
+    // white pawn on e5, black pawn on d7 about to push two squares to d5
+    board.set_bitboard(Color::White, Piece::Pawn, 1u64 << 36);
+    board.set_bitboard(Color::Black, Piece::Pawn, 1u64 << 51);
+    board.turn = Color::Black;
+
+    let _ = board.play_move(51, 35, None); // d7-d5, sets en passant target d6
+    board.turn = Color::White; // force turn back to white for valid move gen
+    println!("{board}");
+
+    debug_bitboard(board.moves(36), 36); // white e5 pawn should see exd6 en passant
+    let _ = board.play_move(36, 43, None); // exd6
+    println!("\n{board}");
+    println!("------------------");
+}
+
+fn test_en_passant_not_adjacent(board: &mut Board) {
+    println!("\nDebug en passant denied for non-adjacent pawn");
+
+    // white pawn on a2, far from the en passant target, black pawn on d7
+    board.set_bitboard(Color::White, Piece::Pawn, 1u64 << 8);
+    board.set_bitboard(Color::Black, Piece::Pawn, 1u64 << 51);
+    board.turn = Color::Black;
+
+    let _ = board.play_move(51, 35, None); // d7-d5, sets en passant target d6
+    board.turn = Color::White; // force turn back to white for valid move gen
+    println!("{board}");
+
+    debug_bitboard(board.moves(8), 8); // a2 pawn should NOT see d6 as a move
+    println!("------------------");
+}
+
+fn test_en_passant_expires(board: &mut Board) {
+    println!("\nDebug en passant expires after an intervening move");
+
+    // white pawn on e5, black pawn on d7 about to push two squares to d5
+    board.set_bitboard(Color::White, Piece::Pawn, 1u64 << 36);
+    board.set_bitboard(Color::Black, Piece::Pawn, 1u64 << 51);
+    board.turn = Color::Black;
+
+    let _ = board.play_move(51, 35, None); // d7-d5, sets en passant target d6
+    board.turn = Color::White;
+    debug_bitboard(board.moves(36), 36); // exd6 should still be available here
+
+    let _ = board.play_move(1, 16, None); // white plays an unrelated move, Nb1-a3
+    board.turn = Color::Black;
+    let _ = board.play_move(57, 40, None); // black plays an unrelated move, Nb8-a6
+    board.turn = Color::White;
+    println!("{board}");
+
+    debug_bitboard(board.moves(36), 36); // en passant should no longer be available
+    println!("------------------");
+}
+
 pub fn run() {
     test_legal_move_filters(&mut Board::new());
 
@@ -320,4 +376,8 @@ pub fn run() {
     test_white_castle_queen(&mut Board::new());
     test_black_castle_king(&mut Board::new());
     test_black_castle_queen(&mut Board::new());
+
+    test_en_passant_capture(&mut Board::new());
+    test_en_passant_not_adjacent(&mut Board::new());
+    test_en_passant_expires(&mut Board::new());
 }

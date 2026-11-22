@@ -123,15 +123,36 @@ impl Board {
         let to_bitboard = 1u64 << to;
         let mut captured: Option<Piece> = None;
 
-        // remove enemy if captured
+        // Remove enemy if captured
         if self.occupancy(color.opposite()) & to_bitboard != 0 {
             let (ec, ep) = match self.square_to_piece(to) {
                 Some(r) => r,
                 None => panic!("apply_move_unchecked: cant find enemy piece/color"),
             };
+
             self.set_bitboard(ec, ep, self.pieces[ec as usize][ep as usize] & !to_bitboard);
+
             captured = Some(ep);
             self.handle_castle_rights(ec, ep, to);
+        }
+        // En passant capture
+        else if piece == Piece::Pawn && self.en_passant == Some(to) {
+            let forward = match color {
+                Color::White => 8,
+                Color::Black => -8,
+            };
+
+            let captured_square = (to as i16 - forward) as u8;
+            let captured_bit = 1u64 << captured_square;
+            let enemy = color.opposite();
+
+            self.set_bitboard(
+                enemy,
+                Piece::Pawn,
+                self.pieces[enemy as usize][Piece::Pawn as usize] & !captured_bit,
+            );
+
+            captured = Some(Piece::Pawn);
         }
 
         // move piece to destination
@@ -296,6 +317,19 @@ impl Board {
             }
         }
 
+        // En passant capture
+        if let Some(target) = self.en_passant {
+            let target_mask = 1u64 << target;
+            if movegen::pawn_attacks(square, color) & target_mask != 0 {
+                let captured_square = (target as i16 - forward) as u8;
+                if self.pieces[enemy as usize][Piece::Pawn as usize] & (1u64 << captured_square)
+                    != 0
+                {
+                    moves |= target_mask;
+                }
+            }
+        }
+
         moves
     }
 
@@ -411,7 +445,14 @@ impl Board {
             return Err(MoveError::InvalidPromotion);
         }
 
+        let next_en_passant = if piece == Piece::Pawn && from.abs_diff(to) == 16 {
+            Some((from + to) / 2)
+        } else {
+            None
+        };
+
         let captured_piece = self.apply_move_unchecked(color, piece, from, to);
+        self.en_passant = next_en_passant;
 
         if promoting {
             self.handle_promotion(color, to, promote.unwrap());
